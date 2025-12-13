@@ -43,11 +43,11 @@ int main(int argc, char **argv) {
   
   struct sockaddr_in client_addr;
   int client_addr_len = sizeof(client_addr);
-  cout << "Waiting for a client to connect...\n";
-  cout << "Logs from your program will appear here!\n";
   
-  accept(server_fd, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
+  int client_fd = accept(server_fd, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
   cout << "Client connected\n";
+  const char* response = "+PONG\r\n";
+  send(client_fd, response , strlen(response) , 0);
   
   close(server_fd);
 
