@@ -43,12 +43,16 @@ int main(int argc, char **argv) {
   
   struct sockaddr_in client_addr;
   int client_addr_len = sizeof(client_addr);
-  
   int client_fd = accept(server_fd, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
   cout << "Client connected\n";
-  const char* response = "+PONG\r\n";
-  send(client_fd, response , strlen(response) , 0);
   
+  string str;
+  while(getline(cin,str)) {
+    const char* response = "+PONG\r\n";
+    
+    if(str == "PING") send(client_fd, response , strlen(response) , 0);  
+  }
+
   close(server_fd);
 
   return 0;
