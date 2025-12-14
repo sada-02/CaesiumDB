@@ -46,11 +46,12 @@ int main(int argc, char **argv) {
   int client_fd = accept(server_fd, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
   cout << "Client connected\n";
   
-  string str;
-  while(getline(cin,str)) {
+  int bytes_read;
+  char buffer[1024];
+  while((bytes_read = recv(client_fd , buffer , sizeof(buffer) , 0))>0) {
     const char* response = "+PONG\r\n";
     
-    if(str == "PING") send(client_fd, response , strlen(response) , 0);  
+    send(client_fd, response , strlen(response) , 0);  
   }
 
   close(server_fd);
