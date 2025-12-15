@@ -77,7 +77,7 @@ vector<string> RESPparser(const char* str) {
   return tokens;
 }
 
-string encodeRESP(vector<string>& str , bool isArr = false) {
+string encodeRESP(const vector<string>& str , bool isArr = false) {
   string res = "";
   if(isArr) {
     res = "*"+to_string(int(str.size())-1)+"\r\n";
@@ -94,7 +94,7 @@ void upperCase(string& str) {
   return;
 }
 
-void handleSET(vector<string>& tokens) {
+void handleSET(const vector<string>& tokens) {
   DATA[tokens[1]].DATA = tokens[2];
   if(tokens.size()>3) {
     for(int i=3 ;i<tokens.size() ;i+=2) {
@@ -111,7 +111,7 @@ void handleSET(vector<string>& tokens) {
   }
 }
 
-void handleGET(string& str) {
+void handleGET(const string& str) {
   if(DATA.find(str) != DATA.end() && DATA[str].expiryTime.has_value()) {
     if(chrono::steady_clock::now() >= DATA[str].expiryTime) {
       DATA.erase(DATA.find(str));
@@ -119,7 +119,7 @@ void handleGET(string& str) {
   }
 }
 
-int handleRPUSH(vector<string>& tokens) {
+int handleRPUSH(const vector<string>& tokens) {
   int size = -1;
   for(int i=2 ;i<tokens.size() ;i++) {
     if(LISTS.find(tokens[1]) == LISTS.end()) {
