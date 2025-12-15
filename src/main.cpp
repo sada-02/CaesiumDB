@@ -67,7 +67,7 @@ string encodeRESP(vector<string> str , bool isArr = false) {
 }
 
 void upperCase(string& str) {
-  transform(tokens[0].begin(), tokens[0].end(), tokens[0].begin(),[](unsigned char c){ return std::toupper(c);});
+  transform(str.begin(), str.end(), str.begin(),[](unsigned char c){ return std::toupper(c);});
   return;
 }
 
@@ -146,7 +146,7 @@ void eventLoop() {
               response = "$-1\r\n";
             }
             else {
-              response = encodeRESP(vector<string> {"GARBAGE" , DATA[tokens[1]]}).c_str();
+              response = encodeRESP(vector<string> {"GARBAGE" , DATA[tokens[1]].DATA}).c_str();
             }
           }
 
