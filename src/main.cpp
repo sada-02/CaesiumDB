@@ -15,6 +15,47 @@ int serverFD;
 vector<int> clients;
 map<int,struct sockaddr_in> clientINFO;
 
+vector<string> RESPparser(const char* str) {
+  int n = strlen(str);
+  vector<string> tokens ;
+  string num = "";
+  bool takeNum = false;
+  for(int i=0 ;i<n ;i++) {
+    if(takeNum) {
+      if((str[i]>='0' && str[i]<='9')) {
+        num+=str[i];
+      }
+      else {
+        takeNum = false;
+        i+=2;
+        string inp = "";
+
+        while(i<n-1 && str[i] != '\r' && str[i+1] != '\n') {
+          inp+=str[i];
+          i++;
+        }
+        i--;
+        tokens.push_back(inp);
+      }
+    }
+    if(str[i] == '$') {
+      takeNum = true;
+    }
+  }
+}
+
+string encodeRESP(vector<string> str , bool isArr = false) {
+  string res = "";
+  if(isArr) {
+    res = "*"+to_string(int(str.size())-1)+"\r\n";
+  }
+  for(int i=1 ;i<str.size() ;i++) {
+    res+="$"+to_string(int(tokens[i].size()))+"\r\n"+tokens[i]+"\r\n";
+  }
+
+  return str;
+}
+
 void eventLoop() {
   while(true) {
     fd_set readFDs;
@@ -44,10 +85,18 @@ void eventLoop() {
       if(FD_ISSET(currFD , &readFDs)) {
         char buffer[1024];
         int bytesRead = recv(currFD , buffer , sizeof(buffer) , 0);
-        
+        vector<string> tokens = RESPparser(buffer);
+        const char* response = NULL;
+
         if(bytesRead > 0) {
-          const char* response = "+PONG\r\n";
-          send(currFD, response , strlen(response) , 0);  
+          if(tokens[0] == "PING") {
+            response = "+PONG\r\n";
+            send(currFD, response , strlen(response) , 0); 
+          }
+          else if(tokens[0] == "ECHO") {
+            response = encodeRESP(buffer);
+            send(currFD, response , strlen(response) , 0);
+          }
         } 
         else {
           close(currFD);
