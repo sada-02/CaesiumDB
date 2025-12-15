@@ -177,7 +177,7 @@ void eventLoop() {
             response = "+PONG\r\n";
           }
           else if(tokens[0] == "ECHO") {
-            string resstr = encodeRESP(tokens).c_str();
+            string resstr = encodeRESP(tokens);
             response = resstr.c_str();
           }
           else if(tokens[0] == "SET") {
@@ -190,7 +190,7 @@ void eventLoop() {
               response = "$-1\r\n";
             }
             else {
-              string resstr = encodeRESP(vector<string> {"GARBAGE" , DATA[tokens[1]].DATA}).c_str();
+              string resstr = encodeRESP(vector<string> {"GARBAGE" , DATA[tokens[1]].DATA});
               response = resstr.c_str();
             }
           }
@@ -234,7 +234,7 @@ void eventLoop() {
                   temp = temp->next;
                 }
 
-                string resstr = encodeRESP(keys , true).c_str();
+                string resstr = encodeRESP(keys , true);
                 response = resstr.c_str();
               }
             }
