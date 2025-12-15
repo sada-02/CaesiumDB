@@ -4,6 +4,7 @@
 #include <cstring>
 #include <vector>
 #include <map>
+#include <set>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -21,7 +22,29 @@ struct metaData {
   string DATA;
   optional<chrono::steady_clock::time_point> expiryTime;
 };
+
+struct ListNode {
+  ListNode* next;
+  string key;
+
+  ListNode(string str = "") {
+    next = NULL;
+    key = str;
+  }
+};
+
+struct List{
+  ListNode* root;
+  int size;
+
+  List(string str="") {
+    root = new ListNode(str);
+    size = 1;
+  }
+};
+
 map<string,metaData> DATA;
+map<string,List> LISTS;
 
 vector<string> RESPparser(const char* str) {
   int n = strlen(str);
@@ -96,6 +119,23 @@ void handleGET(string& str) {
   }
 }
 
+int handleRPUSH(vector<string>& tokens) {
+  if(LISTS.find(tokens[1]) == LISTS.end()) {
+    LISTS[tokens[1]].root = new ListNode(tokens[1]);
+    return 1;
+  }
+  else {
+    ListNode* temp = LISTS[tokens[1]].root;
+    while(temp->next) {
+      temp = temp->next;
+    }
+    temp->next = new ListNode(tokens[2].substr(1,tokens[2].size()-2));
+    return ++LISTS[tokens[1]].size;
+  }
+
+  return -1;
+}
+
 void eventLoop() {
   while(true) {
     fd_set readFDs;
@@ -147,6 +187,12 @@ void eventLoop() {
             }
             else {
               response = encodeRESP(vector<string> {"GARBAGE" , DATA[tokens[1]].DATA}).c_str();
+            }
+          }
+          else if(tokens[0] == "RPUSH") {
+            int lsize = handleRPUSH(tokens);
+            if(lsize>0) {
+              response = ":"+to_string(lsize)+"\r\n";
             }
           }
 
