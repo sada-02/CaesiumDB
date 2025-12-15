@@ -120,19 +120,20 @@ void handleGET(string& str) {
 }
 
 int handleRPUSH(vector<string>& tokens) {
-  if(LISTS.find(tokens[1]) == LISTS.end()) {
-    LISTS[tokens[1]].root = new ListNode(tokens[1]);
-    return 1;
-  }
-  else {
-    ListNode* temp = LISTS[tokens[1]].root;
-    while(temp->next) {
-      temp = temp->next;
+  for(int i=2 ;i<tokens.size() ;i++) {
+    if(LISTS.find(tokens[1]) == LISTS.end()) {
+      LISTS[tokens[1]].root = new ListNode(tokens[i].substr(1,tokens[i].size()-2));
+      return 1;
     }
-    temp->next = new ListNode(tokens[2].substr(1,tokens[2].size()-2));
-    return ++LISTS[tokens[1]].size;
+    else {
+      ListNode* temp = LISTS[tokens[1]].root;
+      while(temp->next) {
+        temp = temp->next;
+      }
+      temp->next = new ListNode(tokens[i].substr(1,tokens[i].size()-2));
+      return ++LISTS[tokens[1]].size;
+    }
   }
-
   return -1;
 }
 
