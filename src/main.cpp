@@ -197,6 +197,43 @@ void eventLoop() {
               response = (":"+to_string(lsize)+"\r\n").c_str();
             }
           }
+          else if(tokens[0] == "LRANGE") {
+            int startIDX = stoi(tokens[2]) , endIDX = stoi(tokens[3]);
+            if(LISTS.find(tokens[1]) == LISTS.end()) {
+              response = "*0\r\n";
+            }
+            else {
+              if(startIDX<0) {
+                startIDX = LISTS[tokens[1]].size + startIDX;
+              }
+              if(endIDX<0) {
+                endIDX = LISTS[tokens[1]].size + endIDX;
+              }
+              
+              if(LISTS[tokens[1]].size < startIDX || startIDX > endIDX) {
+                response = "*0\r\n";
+              }
+              else {
+                vector<string> keys;
+                keys.push_back("GARBAGE");
+                int i=0;
+                ListNode* temp = LISTS[tokens[1]].root;
+                while(i<startIDX) {
+                  i++;
+                  temp = temp->next;
+                }
+                endIDX = min(endIDX , LISTS[tokens[1]].size);
+
+                while(i<endIDX) {
+                  i++;
+                  keys.push_back(temp->key);
+                  temp = temp->next;
+                }
+
+                response = encodeRESP(keys , true).c_str();
+              }
+            }
+          }
 
           send(currFD, response , strlen(response) , 0);
         } 
