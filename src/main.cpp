@@ -123,7 +123,7 @@ int handleRPUSH(const vector<string>& tokens) {
   int size = -1;
   for(int i=2 ;i<tokens.size() ;i++) {
     if(LISTS.find(tokens[1]) == LISTS.end()) {
-      LISTS[tokens[1]].root = new ListNode(tokens[i].substr(1,tokens[i].size()-2));
+      LISTS[tokens[1]].root = new ListNode(tokens[i]);
       LISTS[tokens[1]].size = 1;
       size = 1;
     }
