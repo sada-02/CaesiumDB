@@ -97,7 +97,7 @@ void eventLoop() {
             response = "+PONG\r\n";
             send(currFD, response , strlen(response) , 0); 
           }
-          else if(uppercase(tokens[0]) == "ECHO") {
+          else if(tokens[0] == "ECHO") {
             response = encodeRESP(tokens).c_str();
             send(currFD, response , strlen(response) , 0);
           }
