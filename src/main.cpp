@@ -120,10 +120,11 @@ void handleGET(string& str) {
 }
 
 int handleRPUSH(vector<string>& tokens) {
+  int size = -1;
   for(int i=2 ;i<tokens.size() ;i++) {
     if(LISTS.find(tokens[1]) == LISTS.end()) {
       LISTS[tokens[1]].root = new ListNode(tokens[i].substr(1,tokens[i].size()-2));
-      return 1;
+      size = 1;
     }
     else {
       ListNode* temp = LISTS[tokens[1]].root;
@@ -131,10 +132,10 @@ int handleRPUSH(vector<string>& tokens) {
         temp = temp->next;
       }
       temp->next = new ListNode(tokens[i].substr(1,tokens[i].size()-2));
-      return ++LISTS[tokens[1]].size;
+      size = ++LISTS[tokens[1]].size;
     }
   }
-  return -1;
+  return size;
 }
 
 void eventLoop() {
