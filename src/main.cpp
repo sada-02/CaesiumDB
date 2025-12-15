@@ -94,7 +94,7 @@ void upperCase(string& str) {
   return;
 }
 
-void handleSET(const vector<string>& tokens) {
+void handleSET(vector<string>& tokens) {
   DATA[tokens[1]].DATA = tokens[2];
   if(tokens.size()>3) {
     for(int i=3 ;i<tokens.size() ;i+=2) {
