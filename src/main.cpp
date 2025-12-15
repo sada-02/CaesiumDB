@@ -52,10 +52,10 @@ string encodeRESP(vector<string> str , bool isArr = false) {
     res = "*"+to_string(int(str.size())-1)+"\r\n";
   }
   for(int i=1 ;i<str.size() ;i++) {
-    res+="$"+to_string(int(tokens[i].size()))+"\r\n"+tokens[i]+"\r\n";
+    res+="$"+to_string(int(str[i].size()))+"\r\n"+str[i]+"\r\n";
   }
 
-  return str;
+  return res;
 }
 
 void eventLoop() {
@@ -89,14 +89,16 @@ void eventLoop() {
         int bytesRead = recv(currFD , buffer , sizeof(buffer) , 0);
         vector<string> tokens = RESPparser(buffer);
         const char* response = NULL;
+        transform(tokens[0].begin(), tokens[0].end(), tokens[0].begin(),  
+        [](unsigned char c){ return std::toupper(c);});
 
         if(bytesRead > 0) {
           if(tokens[0] == "PING") {
             response = "+PONG\r\n";
             send(currFD, response , strlen(response) , 0); 
           }
-          else if(tokens[0] == "ECHO") {
-            response = encodeRESP(tokens);
+          else if(uppercase(tokens[0]) == "ECHO") {
+            response = encodeRESP(tokens).c_str();
             send(currFD, response , strlen(response) , 0);
           }
         } 
