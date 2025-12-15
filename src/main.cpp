@@ -177,7 +177,8 @@ void eventLoop() {
             response = "+PONG\r\n";
           }
           else if(tokens[0] == "ECHO") {
-            response = encodeRESP(tokens).c_str();
+            string resstr = encodeRESP(tokens).c_str();
+            response = resstr.c_str();
           }
           else if(tokens[0] == "SET") {
             response = "+OK\r\n";
@@ -189,13 +190,15 @@ void eventLoop() {
               response = "$-1\r\n";
             }
             else {
-              response = encodeRESP(vector<string> {"GARBAGE" , DATA[tokens[1]].DATA}).c_str();
+              string resstr = encodeRESP(vector<string> {"GARBAGE" , DATA[tokens[1]].DATA}).c_str();
+              response = resstr.c_str();
             }
           }
           else if(tokens[0] == "RPUSH") {
             int lsize = handleRPUSH(tokens);
             if(lsize>0) {
-              response = (":"+to_string(lsize)+"\r\n").c_str();
+              string resstr = ":"+to_string(lsize)+"\r\n";
+              response = resstr.c_str();
             }
           }
           else if(tokens[0] == "LRANGE") {
@@ -231,7 +234,8 @@ void eventLoop() {
                   temp = temp->next;
                 }
 
-                response = encodeRESP(keys , true).c_str();
+                string resstr = encodeRESP(keys , true).c_str();
+                response = resstr.c_str();
               }
             }
           }
