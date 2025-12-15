@@ -42,6 +42,8 @@ vector<string> RESPparser(const char* str) {
       takeNum = true;
     }
   }
+
+  return tokens;
 }
 
 string encodeRESP(vector<string> str , bool isArr = false) {
@@ -94,7 +96,7 @@ void eventLoop() {
             send(currFD, response , strlen(response) , 0); 
           }
           else if(tokens[0] == "ECHO") {
-            response = encodeRESP(buffer);
+            response = encodeRESP(tokens);
             send(currFD, response , strlen(response) , 0);
           }
         } 
