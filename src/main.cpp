@@ -89,7 +89,7 @@ void handleSET(vector<string>& tokens) {
 }
 
 void handleGET(string& str) {
-  if(DATA.find(str) != DATA.end()) {
+  if(DATA.find(str) != DATA.end() && DATA[str].expiryTime.has_value()) {
     if(chrono::steady_clock::now() >= DATA[str].expiryTime) {
       DATA.erase(DATA.find(str));
     }
