@@ -14,6 +14,7 @@ using namespace std;
 int serverFD;
 vector<int> clients;
 map<int,struct sockaddr_in> clientINFO;
+map<string,string> DATA;
 
 vector<string> RESPparser(const char* str) {
   int n = strlen(str);
@@ -95,12 +96,24 @@ void eventLoop() {
         if(bytesRead > 0) {
           if(tokens[0] == "PING") {
             response = "+PONG\r\n";
-            send(currFD, response , strlen(response) , 0); 
           }
           else if(tokens[0] == "ECHO") {
             response = encodeRESP(tokens).c_str();
-            send(currFD, response , strlen(response) , 0);
           }
+          else if(tokens[0] == "SET") {
+            response = "+OK\r\n";
+            DATA[tokens[1]] = tokens[2];
+          }
+          else if(tokens[0] == "GET") {
+            if(DATA.find(tokens[1]) == DATA) {
+              response = "$-1\r\n";
+            }
+            else {
+              response = encodeRESP(DATA[tokens[1]]);
+            }
+          }
+
+          send(currFD, response , strlen(response) , 0);
         } 
         else {
           close(currFD);
