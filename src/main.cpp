@@ -109,7 +109,7 @@ void eventLoop() {
               response = "$-1\r\n";
             }
             else {
-              response = encodeRESP(DATA[tokens[1]]).c_str();
+              response = encodeRESP(vector<string> {"GARBAGE" , DATA[tokens[1]]}).c_str();
             }
           }
 
