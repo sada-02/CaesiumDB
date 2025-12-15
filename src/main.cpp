@@ -2,6 +2,8 @@
 #include <cstdlib>
 #include <string>
 #include <cstring>
+#include <vector>
+#include <map>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -9,18 +11,67 @@
 #include <netdb.h>
 using namespace std;
 
+int serverFD;
+vector<int> clients;
+map<int,struct sockaddr_in> clientINFO;
+
+void eventLoop() {
+  while(true) {
+    fd_set readFDs;
+    FD_ZERO(&readFDs);
+    FD_SET(serverFD,&readFDs);
+    int maxFD = serverFD;
+
+    for(int id : clients) {
+      FD_SET(id,&readFDs);
+      maxFD = max(id,maxFD);
+    }
+
+    select(maxFD + 1 , &readFDs , NULL , NULL , NULL);
+
+    if(FD_ISSET(serverFD,&readFDs)) {
+      struct sockaddr_in client_addr;
+      int client_addr_len = sizeof(client_addr);
+      int clientFD = accept(serverFD, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
+      clientINFO[clientFD] = client_addr;
+      clients.push_back(clientFD);
+      cout << "Client connected\n";
+    }
+    
+    for(int i = clients.size() - 1; i >= 0; i--) {
+      int currFD = clients[i];
+
+      if(FD_ISSET(currFD , &readFDs)) {
+        char buffer[1024];
+        int bytesRead = recv(currFD , buffer , sizeof(buffer) , 0);
+        
+        if(bytesRead > 0) {
+          const char* response = "+PONG\r\n";
+          send(currFD, response , strlen(response) , 0);  
+        } 
+        else {
+          close(currFD);
+          clients.erase(clients.begin() + i);
+          clientINFO.erase(currFD);
+        }
+      }
+      
+    }
+  }
+}
+
 int main(int argc, char **argv) {
   cout << unitbuf;
   cerr << unitbuf;
   
-  int server_fd = socket(AF_INET, SOCK_STREAM, 0);
-  if (server_fd < 0) {
+  serverFD = socket(AF_INET, SOCK_STREAM, 0);
+  if (serverFD < 0) {
    cerr << "Failed to create server socket\n";
    return 1;
   }
   
   int reuse = 1;
-  if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0) {
+  if (setsockopt(serverFD, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0) {
     cerr << "setsockopt failed\n";
     return 1;
   }
@@ -30,31 +81,19 @@ int main(int argc, char **argv) {
   server_addr.sin_addr.s_addr = INADDR_ANY;
   server_addr.sin_port = htons(6379);
   
-  if (bind(server_fd, (struct sockaddr *) &server_addr, sizeof(server_addr)) != 0) {
+  if (bind(serverFD, (struct sockaddr *) &server_addr, sizeof(server_addr)) != 0) {
     cerr << "Failed to bind to port 6379\n";
     return 1;
   }
   
   int connection_backlog = 5;
-  if (listen(server_fd, connection_backlog) != 0) {
+  if (listen(serverFD, connection_backlog) != 0) {
     cerr << "listen failed\n";
     return 1;
   }
   
-  struct sockaddr_in client_addr;
-  int client_addr_len = sizeof(client_addr);
-  int client_fd = accept(server_fd, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
-  cout << "Client connected\n";
-  
-  int bytes_read;
-  char buffer[1024];
-  while((bytes_read = recv(client_fd , buffer , sizeof(buffer) , 0))>0) {
-    const char* response = "+PONG\r\n";
-    
-    send(client_fd, response , strlen(response) , 0);  
-  }
-
-  close(server_fd);
+  eventLoop();
+  close(serverFD);
 
   return 0;
 }
