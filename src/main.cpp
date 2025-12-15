@@ -77,7 +77,7 @@ vector<string> RESPparser(const char* str) {
   return tokens;
 }
 
-string encodeRESP(vector<string> str , bool isArr = false) {
+string encodeRESP(vector<string>& str , bool isArr = false) {
   string res = "";
   if(isArr) {
     res = "*"+to_string(int(str.size())-1)+"\r\n";
@@ -124,6 +124,7 @@ int handleRPUSH(vector<string>& tokens) {
   for(int i=2 ;i<tokens.size() ;i++) {
     if(LISTS.find(tokens[1]) == LISTS.end()) {
       LISTS[tokens[1]].root = new ListNode(tokens[i].substr(1,tokens[i].size()-2));
+      LISTS[tokens[1]].size = 1;
       size = 1;
     }
     else {
@@ -209,7 +210,7 @@ void eventLoop() {
               if(endIDX<0) {
                 endIDX = LISTS[tokens[1]].size + endIDX;
               }
-              
+
               if(LISTS[tokens[1]].size < startIDX || startIDX > endIDX) {
                 response = "*0\r\n";
               }
@@ -222,9 +223,9 @@ void eventLoop() {
                   i++;
                   temp = temp->next;
                 }
-                endIDX = min(endIDX , LISTS[tokens[1]].size);
+                endIDX = min(endIDX , LISTS[tokens[1]].size-1);
 
-                while(i<endIDX) {
+                while(temp && i<=endIDX) {
                   i++;
                   keys.push_back(temp->key);
                   temp = temp->next;
