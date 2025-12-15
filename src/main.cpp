@@ -9,12 +9,19 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <chrono>
+#include <optional>
 using namespace std;
 
 int serverFD;
 vector<int> clients;
 map<int,struct sockaddr_in> clientINFO;
-map<string,string> DATA;
+
+struct metaData {
+  string DATA;
+  optional<chrono::steady_clock::time_point> expiryTime;
+};
+map<string,metaData> DATA;
 
 vector<string> RESPparser(const char* str) {
   int n = strlen(str);
@@ -59,6 +66,36 @@ string encodeRESP(vector<string> str , bool isArr = false) {
   return res;
 }
 
+void upperCase(string& str) {
+  transform(tokens[0].begin(), tokens[0].end(), tokens[0].begin(),[](unsigned char c){ return std::toupper(c);});
+  return;
+}
+
+void handleSET(vector<string>& tokens) {
+  DATA[tokens[1]].DATA = tokens[2];
+  if(tokens.size()>3) {
+    for(int i=3 ;i<tokens.size() ;i+=2) {
+      upperCase(tokens[i]);
+      if(tokens[i] == "EX") {
+        int time = stoi(tokens[i+1]);
+        DATA[tokens[1]].expiryTime = chrono::steady_clock::now() + chrono::seconds(time);
+      }
+      else if(tokens[i] == "PX") {
+        int time = stoi(tokens[i+1]);
+        DATA[tokens[1]].expiryTime = chrono::steady_clock::now() + chrono::milliseconds(time);
+      }
+    }
+  }
+}
+
+void handleGET(string& str) {
+  if(DATA.find(str) != DATA.end()) {
+    if(chrono::steady_clock::now() >= DATA[str].expiryTime) {
+      DATA.erase(DATA.find(str));
+    }
+  }
+}
+
 void eventLoop() {
   while(true) {
     fd_set readFDs;
@@ -90,8 +127,7 @@ void eventLoop() {
         int bytesRead = recv(currFD , buffer , sizeof(buffer) , 0);
         vector<string> tokens = RESPparser(buffer);
         const char* response = NULL;
-        transform(tokens[0].begin(), tokens[0].end(), tokens[0].begin(),  
-        [](unsigned char c){ return std::toupper(c);});
+        upperCase(tokens[0]);
 
         if(bytesRead > 0) {
           if(tokens[0] == "PING") {
@@ -102,9 +138,10 @@ void eventLoop() {
           }
           else if(tokens[0] == "SET") {
             response = "+OK\r\n";
-            DATA[tokens[1]] = tokens[2];
+            handleSET(tokens);
           }
           else if(tokens[0] == "GET") {
+            handleGET(tokens[1]);
             if(DATA.find(tokens[1]) == DATA.end()) {
               response = "$-1\r\n";
             }
