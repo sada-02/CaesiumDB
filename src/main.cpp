@@ -105,11 +105,11 @@ void eventLoop() {
             DATA[tokens[1]] = tokens[2];
           }
           else if(tokens[0] == "GET") {
-            if(DATA.find(tokens[1]) == DATA) {
+            if(DATA.find(tokens[1]) == DATA.end()) {
               response = "$-1\r\n";
             }
             else {
-              response = encodeRESP(DATA[tokens[1]]);
+              response = encodeRESP(DATA[tokens[1]]).c_str();
             }
           }
 
