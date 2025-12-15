@@ -192,7 +192,7 @@ void eventLoop() {
           else if(tokens[0] == "RPUSH") {
             int lsize = handleRPUSH(tokens);
             if(lsize>0) {
-              response = ":"+to_string(lsize)+"\r\n";
+              response = (":"+to_string(lsize)+"\r\n").c_str();
             }
           }
 
