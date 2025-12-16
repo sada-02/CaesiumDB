@@ -146,6 +146,10 @@ string encodeRESPint(int val) {
   return ":"+to_string(val)+"\r\n";
 }
 
+string encodeRESPsimpleSTR(const string& str) {
+  return "+"+str+"\r\n";
+}
+
 void upperCase(string& str) {
   transform(str.begin(), str.end(), str.begin(),[](unsigned char c){ return std::toupper(c);});
   return;
@@ -254,6 +258,15 @@ void checkBlockedTimeouts() {
         temp = temp->next;
       }
     }
+  }
+}
+
+string handleTYPE(const vector<string>& tokens) {
+  if(DATA.find(tokens[1]) == DATA.end()) {
+    return encodeRESPsimpleSTR("none");
+  }
+  else {
+    return encodeRESPsimpleSTR("string");
   }
 }
 
@@ -445,6 +458,9 @@ void eventLoop() {
               response = encodeRESP(vector<string> {"GARBAGE" , tokens[1] , ele->key}, true);
               delete ele;
             }
+          }
+          else if(tokens[0] == "TYPE") {
+            response = handleTYPE(tokens);
           }
 
         if(sendResponse) send(currFD, response.c_str() , response.size() , 0);
