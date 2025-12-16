@@ -278,7 +278,7 @@ void eventLoop() {
             int numEle = 1;
             if(tokens.size() > 2) numEle = stoi(tokens[2]);
 
-            vector<string> element = handlePOP(tokens[1]);
+            vector<string> element = handlePOP(tokens[1],numEle);
             if(element.size() == 0) {
               response = "$-1\r\n";
             }
