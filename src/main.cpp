@@ -151,12 +151,17 @@ int handlePUSH(const vector<string>& tokens , bool isAppend = true) {
   return size;
 }
 
-string handlePOP(string& str) {
+vector<string> handlePOP(string& str , int numEle=1) {
   if(LISTS.find(str)==LISTS.end() || LISTS[str].size==0) return "";
-  ListNode* temp = LISTS[str].root;
-  LISTS[str].root = LISTS[str].root->next;
-  string res = temp->key;
-  delete temp;
+  vector<string> res;
+  res.push_back("GARBAGE");
+
+  for(int i=0 ;i<numEle && LISTS[str].root ;i++) {
+    ListNode* temp = LISTS[str].root;
+    LISTS[str].root = LISTS[str].root->next;
+    res.push_back(temp->key);
+    delete temp;
+  }
 
   return res;
 }
@@ -270,12 +275,15 @@ void eventLoop() {
             response = encodeRESPint(lsize);
           }
           else if(tokens[0] == "LPOP") {
-            string element = handlePOP(tokens[1]);
+            int numEle = 1;
+            if(tokens.size() > 2) numEle = stoi(tokens[2]);
+
+            vector<string> element = handlePOP(tokens[1]);
             if(element.size() == 0) {
               response = "$-1\r\n";
             }
             else {
-              response = encodeRESP(vector<string> {"GARBAGE" , element});
+              response = encodeRESP(element);
             }
           }
 
