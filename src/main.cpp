@@ -152,7 +152,7 @@ int handlePUSH(const vector<string>& tokens , bool isAppend = true) {
 }
 
 string handlePOP(string& str) {
-  if(LISTS.find(str)==LISTS.end() || LISTS[str].size()==0) return "";
+  if(LISTS.find(str)==LISTS.end() || LISTS[str].size==0) return "";
   ListNode* temp = LISTS[str].root;
   LISTS[str].root = LISTS[str].root->next;
   string res = temp->key;
