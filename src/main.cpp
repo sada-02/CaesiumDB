@@ -97,6 +97,7 @@ struct List{
 
 map<string,metaData> DATA;
 map<string,List> LISTS;
+map<string,map<string,map<string,string>>> STREAM;
 
 vector<string> RESPparser(const char* str) {
   int n = strlen(str);
@@ -262,11 +263,14 @@ void checkBlockedTimeouts() {
 }
 
 string handleTYPE(const vector<string>& tokens) {
-  if(DATA.find(tokens[1]) == DATA.end()) {
-    return encodeRESPsimpleSTR("none");
+  if(DATA.find(tokens[1]) != DATA.end()) {
+    return encodeRESPsimpleSTR("string");
+  }
+  else if(STREAM.find(tokens[1]) != STREAM.end()) {
+    return encodeRESPsimpleSTR("stream");
   }
   else {
-    return encodeRESPsimpleSTR("string");
+    return encodeRESPsimpleSTR("none");
   }
 }
 
@@ -458,6 +462,12 @@ void eventLoop() {
               response = encodeRESP(vector<string> {"GARBAGE" , tokens[1] , ele->key}, true);
               delete ele;
             }
+          }
+          else if(tokens[0] == "XADD") {
+            for(int i=3 ;i<tokens.size() ;i+=2) {
+              STREAM[tokens[1]][tokens[2]][tokens[i]] = tokens[i+1]; 
+            }
+            response = encodeRESP(vector<string> {"GARBAGE" , tokens[2]})
           }
           else if(tokens[0] == "TYPE") {
             response = handleTYPE(tokens);
