@@ -158,11 +158,11 @@ void handleSET(vector<string>& tokens) {
       upperCase(tokens[i]);
       if(tokens[i] == "EX") {
         int time = stoi(tokens[i+1]);
-        DATA[tokens[1]].expiryTime = chrono::steady_clock::now() + chrono::seconds(time);
+        DATA[tokens[1]].expiryTime = chrono::steady_clock::now() + chrono::s(time);
       }
       else if(tokens[i] == "PX") {
         int time = stoi(tokens[i+1]);
-        DATA[tokens[1]].expiryTime = chrono::steady_clock::now() + chrono::milliseconds(time);
+        DATA[tokens[1]].expiryTime = chrono::steady_clock::now() + chrono::millis(time);
       }
     }
   }
@@ -269,9 +269,42 @@ void eventLoop() {
       maxFD = max(id,maxFD);
     }
 
+    auto now = chrono::steady_clock::now();
+    chrono::steady_clock::time_point leastTime;
+    bool hasTimeout = false;
+    
+    for(const auto& l : LISTS) {
+      blocklist* temp = l.second.blocks;
+      while(temp) {
+        if(!temp->indef) {
+          if(!hasTimeout || temp->timeout < leastTime) {
+            leastTime = temp->timeout;
+            hasTimeout = true;
+          }
+        }
+        temp = temp->next;
+      }
+    }
+    
     struct timeval timeout;
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 10000;
+    if(hasTimeout) {
+      chrono::steady_clock::time_point remTime = leastTime - now;
+      if(remTime.count() <= 0) {
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 0;
+      } 
+      else {
+        auto s = chrono::duration_cast<chrono::seconds>(remTime);
+        auto ms = chrono::duration_cast<chrono::microseconds>(remTime - s);
+        timeout.tv_sec = s.count();
+        timeout.tv_usec = ms.count();
+      }
+    } 
+    else {
+      timeout.tv_sec = 1;
+      timeout.tv_usec = 0;
+    }
+    timeout.tv_usec += 20000;
     
     select(maxFD + 1 , &readFDs , NULL , NULL , &timeout);
     
@@ -401,7 +434,7 @@ void eventLoop() {
                 LISTS[tokens[1]].blocks = nullptr;
               }
               LISTS[tokens[1]].insert(currFD, chrono::steady_clock::now() + 
-              chrono::seconds(stoi(tokens[2])), tokens[2]=="0");
+              chrono::s(stoi(tokens[2])), tokens[2]=="0");
               sendResponse = false;
             }
             else {
