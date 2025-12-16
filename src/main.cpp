@@ -158,11 +158,11 @@ void handleSET(vector<string>& tokens) {
       upperCase(tokens[i]);
       if(tokens[i] == "EX") {
         int time = stoi(tokens[i+1]);
-        DATA[tokens[1]].expiryTime = chrono::steady_clock::now() + chrono::s(time);
+        DATA[tokens[1]].expiryTime = chrono::steady_clock::now() + chrono::seconds(time);
       }
       else if(tokens[i] == "PX") {
         int time = stoi(tokens[i+1]);
-        DATA[tokens[1]].expiryTime = chrono::steady_clock::now() + chrono::millis(time);
+        DATA[tokens[1]].expiryTime = chrono::steady_clock::now() + chrono::milliseconds(time);
       }
     }
   }
@@ -434,7 +434,7 @@ void eventLoop() {
                 LISTS[tokens[1]].blocks = nullptr;
               }
               LISTS[tokens[1]].insert(currFD, chrono::steady_clock::now() + 
-              chrono::s(stoi(tokens[2])), tokens[2]=="0");
+              chrono::seconds(stoi(tokens[2])), tokens[2]=="0");
               sendResponse = false;
             }
             else {
