@@ -135,13 +135,13 @@ int handlePUSH(const vector<string>& tokens , bool isAppend = true) {
           temp = temp->next;
         }
         temp->next = new ListNode(tokens[i]);
-        size = ++LISTS[tokens[1]].size;
       }
       else {
         ListNode* newNode = new ListNode(tokens[i]);
         newNode->next = temp;
         LISTS[tokens[i]].root = newNode;
       }
+      size = ++LISTS[tokens[1]].size;
     }
   }
   return size;
