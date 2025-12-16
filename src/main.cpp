@@ -207,10 +207,10 @@ void eventLoop() {
               response = "*0\r\n";
             }
             else {
-              if(startIDX<0) {
+              while(startIDX<0) {
                 startIDX = LISTS[tokens[1]].size + startIDX;
               }
-              if(endIDX<0) {
+              while(endIDX<0) {
                 endIDX = LISTS[tokens[1]].size + endIDX;
               }
 
