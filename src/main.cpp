@@ -275,7 +275,7 @@ void eventLoop() {
               response = "$-1\r\n";
             }
             else {
-              response = encodeRESP(vector<string> {GARBAGE , element});
+              response = encodeRESP(vector<string> {"GARBAGE" , element});
             }
           }
 
