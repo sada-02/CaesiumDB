@@ -119,7 +119,7 @@ void handleGET(const string& str) {
   }
 }
 
-int handleRPUSH(const vector<string>& tokens) {
+int handlePUSH(const vector<string>& tokens , bool isAppend = true) {
   int size = -1;
   for(int i=2 ;i<tokens.size() ;i++) {
     if(LISTS.find(tokens[1]) == LISTS.end()) {
@@ -129,11 +129,19 @@ int handleRPUSH(const vector<string>& tokens) {
     }
     else {
       ListNode* temp = LISTS[tokens[1]].root;
-      while(temp->next) {
-        temp = temp->next;
+
+      if(isAppend) {
+        while(temp->next) {
+          temp = temp->next;
+        }
+        temp->next = new ListNode(tokens[i]);
+        size = ++LISTS[tokens[1]].size;
       }
-      temp->next = new ListNode(tokens[i]);
-      size = ++LISTS[tokens[1]].size;
+      else {
+        ListNode* newNode = new ListNode(tokens[i]);
+        newNode->next = temp;
+        LISTS[tokens[i]].root = newNode;
+      }
     }
   }
   return size;
@@ -192,8 +200,8 @@ void eventLoop() {
               response = encodeRESP(vector<string> {"GARBAGE" , DATA[tokens[1]].DATA});
             }
           }
-          else if(tokens[0] == "RPUSH") {
-            int lsize = handleRPUSH(tokens);
+          else if(tokens[0] == "RPUSH" || tokens[0] == "LPUSH") {
+            int lsize = handlePUSH(tokens , tokens[0][0] == 'R');
             if(lsize>0) {
               response = ":" + to_string(lsize) + "\r\n";
             }
