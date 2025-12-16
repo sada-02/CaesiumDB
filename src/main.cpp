@@ -288,7 +288,7 @@ void eventLoop() {
     
     struct timeval timeout;
     if(hasTimeout) {
-      chrono::steady_clock::time_point remTime = leastTime - now;
+      auto remTime = leastTime - now;
       if(remTime.count() <= 0) {
         timeout.tv_sec = 0;
         timeout.tv_usec = 0;
