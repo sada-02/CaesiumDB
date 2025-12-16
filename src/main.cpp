@@ -200,6 +200,12 @@ void eventLoop() {
         string response = "";
         upperCase(tokens[0]);
 
+        cout << "Tokens[" << tokens.size() << "]: ";
+        for(const auto& t : tokens) {
+          cout << "\"" << t << "\" ";
+        }
+        cout << endl;
+
         if(bytesRead > 0) {
           if(tokens[0] == "PING") {
             response = "+PONG\r\n";
