@@ -179,7 +179,7 @@ void handleGET(const string& str) {
 int handlePUSH(const vector<string>& tokens , bool isAppend = true) {
   int size = -1;
   for(int i=2 ;i<tokens.size() ;i++) {
-    if(LISTS.find(tokens[1]) == LISTS.end()) {
+    if(LISTS.find(tokens[1]) == LISTS.end() || LISTS[tokens[1]].root == nullptr) {
       LISTS[tokens[1]].root = new ListNode(tokens[i]);
       LISTS[tokens[1]].size = 1;
       size = 1;
