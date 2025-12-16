@@ -224,6 +224,39 @@ vector<string> handlePOP(string& str , int numEle=1) {
   return res;
 }
 
+void checkBlockedTimeouts() {
+  auto now = chrono::steady_clock::now();
+  string response = "*-1\r\n";
+  
+  for(auto& l : LISTS) {
+    if(!l.second.blocks) continue;
+    
+    blocklist* temp = l.second.blocks;
+    blocklist* prev = nullptr;
+    
+    while(temp) {
+      if(!temp->indef && now > temp->timeout) {
+        send(temp->clientFD, response.c_str(), response.size(), 0);
+        
+        if(prev) {
+          prev->next = temp->next;
+          delete temp;
+          temp = prev->next;
+        } 
+        else {
+          l.second.blocks = temp->next;
+          delete temp;
+          temp = l.second.blocks;
+        }
+      } 
+      else {
+        prev = temp;
+        temp = temp->next;
+      }
+    }
+  }
+}
+
 void eventLoop() {
   while(true) {
     fd_set readFDs;
@@ -236,7 +269,13 @@ void eventLoop() {
       maxFD = max(id,maxFD);
     }
 
-    select(maxFD + 1 , &readFDs , NULL , NULL , NULL);
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 10000;
+    
+    select(maxFD + 1 , &readFDs , NULL , NULL , &timeout);
+    
+    checkBlockedTimeouts();
 
     if(FD_ISSET(serverFD,&readFDs)) {
       struct sockaddr_in client_addr;
