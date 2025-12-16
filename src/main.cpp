@@ -283,7 +283,7 @@ void eventLoop() {
               response = "$-1\r\n";
             }
             else {
-              response = encodeRESP(element);
+              response = encodeRESP(element , true);
             }
           }
 
