@@ -18,6 +18,7 @@ using namespace std;
 int serverFD;
 vector<int> clients;
 map<int,struct sockaddr_in> clientINFO;
+pair<long long,long long> lastSTREAMID;
 
 string encodeRESP(const vector<string>& str , bool isArr = false);
 
@@ -151,6 +152,10 @@ string encodeRESPsimpleSTR(const string& str) {
   return "+"+str+"\r\n";
 }
 
+string encodeRESPsimpleERR(const string& str) {
+  return "-"+str+"\r\n";
+}
+
 void upperCase(string& str) {
   transform(str.begin(), str.end(), str.begin(),[](unsigned char c){ return std::toupper(c);});
   return;
@@ -260,6 +265,24 @@ void checkBlockedTimeouts() {
       }
     }
   }
+}
+
+bool checkSTREAMID(string& id) {
+  vector<string> temp;
+  string str;
+  while(getline(id,str,'-')) temp.push_back(str);
+  if(stoll(tokens[0])>lastSTREAMID.first) {
+    lastSTREAMID = {stoll(tokens[0]) , stoll(tokens[1])};
+    return true;
+  }
+  else if(stoll(tokens[0]) == lastSTREAMID.first) {
+    if(stoll(tokens[1]) > lastSTREAMID.second) {
+      lastSTREAMID = {stoll(tokens[0]) , stoll(tokens[1])};
+      return true; 
+    }
+  }
+
+  return false;
 }
 
 string handleTYPE(const vector<string>& tokens) {
@@ -464,10 +487,15 @@ void eventLoop() {
             }
           }
           else if(tokens[0] == "XADD") {
-            for(int i=3 ;i<tokens.size() ;i+=2) {
-              STREAM[tokens[1]][tokens[2]][tokens[i]] = tokens[i+1]; 
+            if(!checkSTREAMID(tokens[2])) {
+              response = encodeRESPsimpleERR("ERR The ID specified in XADD is equal or smaller than the target stream top item");
             }
-            response = encodeRESP(vector<string> {"GARBAGE" , tokens[2]});
+            else {
+              for(int i=3 ;i<tokens.size() ;i+=2) {
+                STREAM[tokens[1]][tokens[2]][tokens[i]] = tokens[i+1]; 
+              }
+              response = encodeRESP(vector<string> {"GARBAGE" , tokens[2]});
+            }
           }
           else if(tokens[0] == "TYPE") {
             response = handleTYPE(tokens);
@@ -518,6 +546,8 @@ int main(int argc, char **argv) {
     cerr << "listen failed\n";
     return 1;
   }
+
+  lastSTREAMID = {0,0};
   
   eventLoop();
   close(serverFD);
