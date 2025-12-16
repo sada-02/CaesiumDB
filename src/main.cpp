@@ -271,7 +271,7 @@ void eventLoop() {
           }
           else if(tokens[0] == "LPOP") {
             string element = handlePOP(tokens[1]);
-            if(element = "") {
+            if(element.size() == 0) {
               response = "$-1\r\n";
             }
             else {
