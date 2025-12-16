@@ -3,6 +3,7 @@
 #include <string>
 #include <cstring>
 #include <vector>
+#include <deque>
 #include <map>
 #include <set>
 #include <unistd.h>
@@ -33,13 +34,62 @@ struct ListNode {
   }
 };
 
+struct blocklist{
+  int clientFD;
+  chrono::steady_clock::time_point timeout;
+  bool indef;
+  blocklist* next;
+
+  blocklist(int id , chrono::steady_clock::time_point t , bool flag = false) {
+    clientFD = id;
+    timeout = t;
+    indef = flag;
+  }
+};
+
 struct List{
   ListNode* root;
   int size;
+  blocklist* blocks;
 
   List(string str="") {
     root = new ListNode(str);
     size = 1;
+    blocks = nullptr;
+  }
+
+  void insert(int cFD , chrono::steady_clock::time_point t , bool flag = false) {
+    if(!blocks) {
+      blocks = new blocklist(cFD , t , flag);
+    }
+    else {
+      blocklist* temp = blocks;
+      while(temp->next) temp = temp->next;
+      temp->next = new blocklist(cFD , t , flag);
+    }
+  }
+
+  void handleREQ(string& str) {
+    if(!blocks) return ;
+
+    blocklist* temp = blocks;
+    string response = "*-1\r\n";
+    while(temp && !temp->indef && chrono::steady_clock::now() > temp->timeout) {
+      send(temp->clientFD,response.c_str(),response.size(),0);
+      blocklist* prev = temp;
+      temp = temp->next;
+      delete prev;
+    }
+    if(!temp) return;
+
+    ListNode* ele = root;
+    root = root->next;
+    size--;
+    response = encodeRESP(vector<string> {"GARBAGE" , str , ele->key}, true);
+    delete ele;
+    send(temp->clientFD,response.c_str(),response.size(),0);
+    blocks = temp->next;
+    delete temp;
   }
 };
 
@@ -149,6 +199,11 @@ int handlePUSH(const vector<string>& tokens , bool isAppend = true) {
       size = ++LISTS[tokens[1]].size;
     }
   }
+
+  while(LISTS[tokens[1]].root && LISTS[tokens[1]].blocks) {
+    LISTS[tokens[1]].handleREQ(tokens[1]);
+  }
+
   return size;
 }
 
@@ -192,6 +247,7 @@ void eventLoop() {
     
     for(int i = clients.size() - 1; i >= 0; i--) {
       int currFD = clients[i];
+      bool sendResponse = true;
 
       if(FD_ISSET(currFD , &readFDs)) {
         char buffer[1024];
@@ -296,8 +352,27 @@ void eventLoop() {
               response = encodeRESP(element , tokens.size()>2);
             }
           }
+          else if(tokens[0] == "BLPOP") {
+            if(LISTS.find(tokens[1]) == LISTS.end() || LISTS[tokens[1]].size == 0) {
+              if(LISTS.find(tokens[1]) == LISTS.end()) {
+                LISTS[tokens[1]].root = nullptr;
+                LISTS[tokens[1]].size = 0;
+                LISTS[tokens[1]].blocks = nullptr;
+              }
+              LISTS[tokens[1]].insert(currFD, chrono::steady_clock::now() + 
+              chrono::seconds(stoi(tokens[2])), tokens[2]=="0");
+              sendResponse = false;
+            }
+            else {
+              ListNode* ele = LISTS[tokens[1]].root;
+              LISTS[tokens[1]].root = LISTS[tokens[1]].root->next;
+              LISTS[tokens[1]].size--;
+              response = encodeRESP(vector<string> {"GARBAGE" , tokens[1] , ele->key}, true);
+              delete ele;
+            }
+          }
 
-          send(currFD, response.c_str() , response.size() , 0);
+        if(sendResponse) send(currFD, response.c_str() , response.size() , 0);
         } 
         else {
           close(currFD);
