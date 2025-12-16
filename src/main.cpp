@@ -19,7 +19,6 @@ int serverFD;
 vector<int> clients;
 map<int,struct sockaddr_in> clientINFO;
 
-// Forward declaration
 string encodeRESP(const vector<string>& str , bool isArr = false);
 
 struct metaData {
@@ -131,7 +130,7 @@ vector<string> RESPparser(const char* str) {
   return tokens;
 }
 
-string encodeRESP(const vector<string>& str , bool isArr = false) {
+string encodeRESP(const vector<string>& str , bool isArr) {
   string res = "";
   if(isArr) {
     res = "*"+to_string(int(str.size())-1)+"\r\n";
