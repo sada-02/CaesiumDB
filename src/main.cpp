@@ -433,8 +433,9 @@ void eventLoop() {
                 LISTS[tokens[1]].size = 0;
                 LISTS[tokens[1]].blocks = nullptr;
               }
+              auto timeoutDuration = chrono::milliseconds(static_cast<long long>(stod(tokens[2]) * 1000));
               LISTS[tokens[1]].insert(currFD, chrono::steady_clock::now() + 
-              chrono::seconds(stoi(tokens[2])), tokens[2]=="0");
+              timeoutDuration, tokens[2]=="0");
               sendResponse = false;
             }
             else {
