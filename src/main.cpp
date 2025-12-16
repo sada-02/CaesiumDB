@@ -286,14 +286,14 @@ void eventLoop() {
           }
           else if(tokens[0] == "LPOP") {
             int numEle = 1;
-            if(tokens.size() > 2 && !tokens[2].empty()) numEle = stoi(tokens[2]);
+            if(tokens.size() > 2) numEle = stoi(tokens[2]);
 
             vector<string> element = handlePOP(tokens[1],numEle);
             if(element.size() == 0) {
               response = "$-1\r\n";
             }
             else {
-              response = encodeRESP(element , true);
+              response = encodeRESP(element , tokens.size()>2);
             }
           }
 
