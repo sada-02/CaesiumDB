@@ -58,6 +58,7 @@ vector<string> RESPparser(const char* str) {
       }
       else {
         takeNum = false;
+        num = "";  
         i+=2;
         string inp = "";
 
