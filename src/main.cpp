@@ -272,6 +272,8 @@ bool checkSTREAMID(string& id) {
   stringstream ID(id);
   string str;
   while(getline(ID,str,'-')) tokens.push_back(str);
+  if(tokens[1] == "*") return true;
+
   if(stoll(tokens[0])>lastSTREAMID.first) {
     lastSTREAMID = make_pair(stoll(tokens[0]) , stoll(tokens[1]));
     return true;
@@ -495,6 +497,23 @@ void eventLoop() {
               response = encodeRESPsimpleERR("ERR The ID specified in XADD is equal or smaller than the target stream top item");
             }
             else {
+              vector<string> seqNum;
+              stringstream ID(tokens[2]);
+              string str;
+              while(getline(ID,str,'-')) seqNum.push_back(str);
+              
+              if(seqNum[1] == "*") {
+                if(lastSTREAMID.first == stoll(seqNum[0])) {
+                  lastSTREAMID.second = lastSTREAMID.second+1;
+                }
+                else {
+                  lastSTREAMID.first = stoll(seqNum[0]);
+                  lastSTREAMID.second = 0;
+                }
+
+                tokens[2] = to_string(lastSTREAMID.first)+"-"+to_string(lastSTREAMID.second);
+              }
+
               for(int i=3 ;i<tokens.size() ;i+=2) {
                 STREAM[tokens[1]][tokens[2]][tokens[i]] = tokens[i+1]; 
               }
