@@ -152,7 +152,7 @@ int handlePUSH(const vector<string>& tokens , bool isAppend = true) {
 }
 
 vector<string> handlePOP(string& str , int numEle=1) {
-  if(LISTS.find(str)==LISTS.end() || LISTS[str].size==0) return "";
+  if(LISTS.find(str)==LISTS.end() || LISTS[str].size==0) return vector<string> {};
   vector<string> res;
   res.push_back("GARBAGE");
 
