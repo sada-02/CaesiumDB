@@ -139,7 +139,7 @@ int handlePUSH(const vector<string>& tokens , bool isAppend = true) {
       else {
         ListNode* newNode = new ListNode(tokens[i]);
         newNode->next = temp;
-        LISTS[tokens[i]].root = newNode;
+        LISTS[tokens[1]].root = newNode;
       }
       size = ++LISTS[tokens[1]].size;
     }
@@ -218,6 +218,7 @@ void eventLoop() {
               if(startIDX<0) {
                 startIDX = 0;
               }
+
               if(endIDX<0) {
                 endIDX = LISTS[tokens[1]].size + endIDX;
               }
