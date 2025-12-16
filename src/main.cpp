@@ -151,6 +151,16 @@ int handlePUSH(const vector<string>& tokens , bool isAppend = true) {
   return size;
 }
 
+string handlePOP(string& str) {
+  if(LISTS.find(str)==LISTS.end() || LISTS[str].size()==0) return "";
+  ListNode* temp = LISTS[str].root;
+  LISTS[str].root = LISTS[str].root->next;
+  string res = temp->key;
+  delete temp;
+
+  return res;
+}
+
 void eventLoop() {
   while(true) {
     fd_set readFDs;
@@ -258,6 +268,15 @@ void eventLoop() {
             int lsize = 0;
             if(LISTS.find(tokens[1]) != LISTS.end()) lsize = LISTS[tokens[1]].size;
             response = encodeRESPint(lsize);
+          }
+          else if(tokens[0] == "LPOP") {
+            string element = handlePOP(tokens[1]);
+            if(element = "") {
+              response = "$-1\r\n";
+            }
+            else {
+              response = encodeRESP(vector<string> {GARBAGE , element});
+            }
           }
 
           send(currFD, response.c_str() , response.size() , 0);
