@@ -19,6 +19,7 @@ int serverFD;
 vector<int> clients;
 map<int,struct sockaddr_in> clientINFO;
 pair<long long,long long> lastSTREAMID;
+const auto now = std::chrono::system_clock::now();
 
 string encodeRESP(const vector<string>& str , bool isArr = false);
 
@@ -497,21 +498,33 @@ void eventLoop() {
               response = encodeRESPsimpleERR("ERR The ID specified in XADD is equal or smaller than the target stream top item");
             }
             else {
-              vector<string> seqNum;
-              stringstream ID(tokens[2]);
-              string str;
-              while(getline(ID,str,'-')) seqNum.push_back(str);
-              
-              if(seqNum[1] == "*") {
-                if(lastSTREAMID.first == stoll(seqNum[0])) {
-                  lastSTREAMID.second = lastSTREAMID.second+1;
+              if(tokens[2] == "*") {
+                long long ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+                if(ms == lastSTREAMID.first) {
+                  lastSTREAMID.second++;
                 }
                 else {
-                  lastSTREAMID.first = stoll(seqNum[0]);
-                  lastSTREAMID.second = 0;
+                  lastSTREAMID.second=0;
                 }
-
                 tokens[2] = to_string(lastSTREAMID.first)+"-"+to_string(lastSTREAMID.second);
+              }
+              else {
+                vector<string> seqNum;
+                stringstream ID(tokens[2]);
+                string str;
+                while(getline(ID,str,'-')) seqNum.push_back(str);
+                
+                if(seqNum[1] == "*") {
+                  if(lastSTREAMID.first == stoll(seqNum[0])) {
+                    lastSTREAMID.second = lastSTREAMID.second+1;
+                  }
+                  else {
+                    lastSTREAMID.first = stoll(seqNum[0]);
+                    lastSTREAMID.second = 0;
+                  }
+
+                  tokens[2] = to_string(lastSTREAMID.first)+"-"+to_string(lastSTREAMID.second);
+                }
               }
 
               for(int i=3 ;i<tokens.size() ;i+=2) {
