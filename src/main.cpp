@@ -488,7 +488,10 @@ void eventLoop() {
             }
           }
           else if(tokens[0] == "XADD") {
-            if(!checkSTREAMID(tokens[2])) {
+            if(tokens[2] == "0-0") {
+              response = encodeRESPsimpleERR("ERR The ID specified in XADD must be greater than 0-0");
+            }
+            else if(!checkSTREAMID(tokens[2])) {
               response = encodeRESPsimpleERR("ERR The ID specified in XADD is equal or smaller than the target stream top item");
             }
             else {
