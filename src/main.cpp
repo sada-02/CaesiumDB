@@ -204,11 +204,17 @@ void eventLoop() {
               response = "*0\r\n";
             }
             else {
-              while(startIDX<0) {
+              if(startIDX<0) {
                 startIDX = LISTS[tokens[1]].size + startIDX;
               }
-              while(endIDX<0) {
+              if(startIDX<0) {
+                startIDX = 0;
+              }
+              if(endIDX<0) {
                 endIDX = LISTS[tokens[1]].size + endIDX;
+              }
+              if(endIDX<0) {
+                endIDX = 0;
               }
 
               if(LISTS[tokens[1]].size < startIDX || startIDX > endIDX) {
