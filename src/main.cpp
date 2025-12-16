@@ -196,6 +196,9 @@ void eventLoop() {
       if(FD_ISSET(currFD , &readFDs)) {
         char buffer[1024];
         int bytesRead = recv(currFD , buffer , sizeof(buffer) , 0);
+        if(bytesRead > 0) {
+          buffer[bytesRead] = '\0';
+        }
         vector<string> tokens = RESPparser(buffer);
         string response = "";
         upperCase(tokens[0]);
@@ -301,8 +304,9 @@ void eventLoop() {
           clients.erase(clients.begin() + i);
           clientINFO.erase(currFD);
         }
+
+        tokens.clear();
       }
-      
     }
   }
 }
