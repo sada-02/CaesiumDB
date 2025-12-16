@@ -268,6 +268,8 @@ void checkBlockedTimeouts() {
 }
 
 bool checkSTREAMID(string& id) {
+  if(id == "*") return true;
+  
   vector<string> tokens;
   stringstream ID(id);
   string str;
