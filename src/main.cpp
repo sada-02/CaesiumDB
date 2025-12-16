@@ -19,7 +19,6 @@ int serverFD;
 vector<int> clients;
 map<int,struct sockaddr_in> clientINFO;
 pair<long long,long long> lastSTREAMID;
-const auto now = std::chrono::system_clock::now();
 
 string encodeRESP(const vector<string>& str , bool isArr = false);
 
@@ -499,12 +498,15 @@ void eventLoop() {
             }
             else {
               if(tokens[2] == "*") {
-                long long ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+                long long ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                  std::chrono::system_clock::now().time_since_epoch()
+                ).count();
                 if(ms == lastSTREAMID.first) {
                   lastSTREAMID.second++;
                 }
                 else {
-                  lastSTREAMID.second=0;
+                  lastSTREAMID.first = ms;
+                  lastSTREAMID.second = 0;
                 }
                 tokens[2] = to_string(lastSTREAMID.first)+"-"+to_string(lastSTREAMID.second);
               }
