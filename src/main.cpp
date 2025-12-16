@@ -13,6 +13,7 @@
 #include <netdb.h>
 #include <chrono>
 #include <optional>
+#include <climits>
 using namespace std;
 
 int serverFD;
@@ -98,7 +99,7 @@ struct List{
 
 map<string,metaData> DATA;
 map<string,List> LISTS;
-map<string,map<string,map<string,string>>> STREAM;
+map<string,map<long long,map<long long,map<string,string>>>> STREAM;
 
 vector<string> RESPparser(const char* str) {
   int n = strlen(str);
@@ -263,6 +264,40 @@ void checkBlockedTimeouts() {
         prev = temp;
         temp = temp->next;
       }
+    }
+  }
+}
+
+void completeID(vector<string>& tokens) {
+  if(tokens[2] == "*") {
+    long long ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::system_clock::now().time_since_epoch()
+    ).count();
+    if(ms == lastSTREAMID.first) {
+      lastSTREAMID.second++;
+    }
+    else {
+      lastSTREAMID.first = ms;
+      lastSTREAMID.second = 0;
+    }
+    tokens[2] = to_string(lastSTREAMID.first)+"-"+to_string(lastSTREAMID.second);
+  }
+  else {
+    vector<string> seqNum;
+    stringstream ID(tokens[2]);
+    string str;
+    while(getline(ID,str,'-')) seqNum.push_back(str);
+    
+    if(seqNum[1] == "*") {
+      if(lastSTREAMID.first == stoll(seqNum[0])) {
+        lastSTREAMID.second = lastSTREAMID.second+1;
+      }
+      else {
+        lastSTREAMID.first = stoll(seqNum[0]);
+        lastSTREAMID.second = 0;
+      }
+
+      tokens[2] = to_string(lastSTREAMID.first)+"-"+to_string(lastSTREAMID.second);
     }
   }
 }
@@ -499,43 +534,77 @@ void eventLoop() {
               response = encodeRESPsimpleERR("ERR The ID specified in XADD is equal or smaller than the target stream top item");
             }
             else {
-              if(tokens[2] == "*") {
-                long long ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                  std::chrono::system_clock::now().time_since_epoch()
-                ).count();
-                if(ms == lastSTREAMID.first) {
-                  lastSTREAMID.second++;
-                }
-                else {
-                  lastSTREAMID.first = ms;
-                  lastSTREAMID.second = 0;
-                }
-                tokens[2] = to_string(lastSTREAMID.first)+"-"+to_string(lastSTREAMID.second);
-              }
-              else {
-                vector<string> seqNum;
-                stringstream ID(tokens[2]);
-                string str;
-                while(getline(ID,str,'-')) seqNum.push_back(str);
-                
-                if(seqNum[1] == "*") {
-                  if(lastSTREAMID.first == stoll(seqNum[0])) {
-                    lastSTREAMID.second = lastSTREAMID.second+1;
-                  }
-                  else {
-                    lastSTREAMID.first = stoll(seqNum[0]);
-                    lastSTREAMID.second = 0;
-                  }
-
-                  tokens[2] = to_string(lastSTREAMID.first)+"-"+to_string(lastSTREAMID.second);
-                }
-              }
+              completeID(tokens);
 
               for(int i=3 ;i<tokens.size() ;i+=2) {
-                STREAM[tokens[1]][tokens[2]][tokens[i]] = tokens[i+1]; 
+                STREAM[tokens[1]][lastSTREAMID.first][lastSTREAMID.second][tokens[i]] = tokens[i+1]; 
               }
               response = encodeRESP(vector<string> {"GARBAGE" , tokens[2]});
             }
+          }
+          else if(tokens[0] == "XRANGE") {
+            long long startMS = -1 , startSEQ = -1 , endMS = -1 , endSEQ = -1;
+            stringstream inp = tokens[2];
+            string str;
+            vector<string> seqNum;
+            while(getline(inp,str,"-")) seqNum.push_back(str);
+            startMS = stoll(seqNum[0]);
+            if(seqNum.size()>1) startSEQ = stoll(seqNum[1]);
+            else startSEQ = 0; 
+
+            seqNum.clear();
+
+            inp = tokens[3];
+            while(getline(inp,str,"-")) seqNum.push_back(str);
+            endMS = stoll(seqNum[0]);
+            if(seqNum.size()>1) endSEQ = stoll(seqNum[1]);
+            else endSEQ = LLONG_MAX; 
+            
+            string result = "";
+            int Count = 0;
+            
+            for(auto& m : STREAM[tokens[1]]) {
+              long long ms = m.first;
+              
+              if(ms < startMS) continue;
+              
+              if(ms > endMS) break;
+              
+              for(auto& s : m.second) {
+                long long seq = s.first;
+                
+                bool inRange = false;
+                if(ms == startMS && ms == endMS) {
+                  inRange = (seq >= startSEQ && seq <= endSEQ);
+                }
+                else if(ms == startMS) {
+                  inRange = (seq >= startSEQ);
+                }
+                else if(ms == endMS) {
+                  inRange = (seq <= endSEQ);
+                }
+                else {
+                  inRange = true;
+                }
+                
+                if(inRange) {
+                  Count++;
+                  string id = to_string(ms) + "-" + to_string(seq);
+                  result += "*2\r\n"; 
+                  result += "$" + to_string(id.size()) + "\r\n" + id + "\r\n";
+                  
+                  int numKeys = s.second.size() * 2; 
+                  result += "*" + to_string(numKeys) + "\r\n";
+                  
+                  for(auto& kv : s.second) {
+                    result += "$" + to_string(kv.first.size()) + "\r\n" + kv.first + "\r\n";
+                    result += "$" + to_string(kv.second.size()) + "\r\n" + kv.second + "\r\n";
+                  }
+                }
+              }
+            }
+            
+            response = "*" + to_string(Count) + "\r\n" + result;
           }
           else if(tokens[0] == "TYPE") {
             response = handleTYPE(tokens);
