@@ -467,7 +467,7 @@ void eventLoop() {
             for(int i=3 ;i<tokens.size() ;i+=2) {
               STREAM[tokens[1]][tokens[2]][tokens[i]] = tokens[i+1]; 
             }
-            response = encodeRESP(vector<string> {"GARBAGE" , tokens[2]})
+            response = encodeRESP(vector<string> {"GARBAGE" , tokens[2]});
           }
           else if(tokens[0] == "TYPE") {
             response = handleTYPE(tokens);
