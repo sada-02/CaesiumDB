@@ -543,23 +543,32 @@ void eventLoop() {
             }
           }
           else if(tokens[0] == "XRANGE") {
-            long long startMS = -1 , startSEQ = -1 , endMS = -1 , endSEQ = -1;
+            long long startMS = -1 , startSEQ = 0 , endMS = -1 , endSEQ = LLONG_MAX;
             stringstream inp(tokens[2]);
             string str;
             vector<string> seqNum;
-            while(getline(inp,str,'-')) seqNum.push_back(str);
-            startMS = stoll(seqNum[0]);
-            if(seqNum.size()>1) startSEQ = stoll(seqNum[1]);
-            else startSEQ = 0; 
-
+            
+            if(tokens[2] == "-") {
+              startMS = 0;
+            }
+            else {
+              while(getline(inp,str,'-')) seqNum.push_back(str);
+              startMS = stoll(seqNum[0]);
+              startSEQ = stoll(seqNum[1]);
+            }
+    
             seqNum.clear();
-
-            inp.str(tokens[3]);
-            inp.clear();
-            while(getline(inp,str,'-')) seqNum.push_back(str);
-            endMS = stoll(seqNum[0]);
-            if(seqNum.size()>1) endSEQ = stoll(seqNum[1]);
-            else endSEQ = LLONG_MAX; 
+            
+            if(tokens[3] == "+") {
+              endMS = LLONG_MAX;
+            }
+            else {
+              inp.str(tokens[3]);
+              inp.clear();
+              while(getline(inp,str,'-')) seqNum.push_back(str);
+              endMS = stoll(seqNum[0]);
+              endSEQ = stoll(seqNum[1]); 
+            }
             
             string result = "";
             int Count = 0;
