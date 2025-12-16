@@ -132,7 +132,7 @@ int handleRPUSH(const vector<string>& tokens) {
       while(temp->next) {
         temp = temp->next;
       }
-      temp->next = new ListNode(tokens[i].substr(1,tokens[i].size()-2));
+      temp->next = new ListNode(tokens[i]);
       size = ++LISTS[tokens[1]].size;
     }
   }
@@ -169,7 +169,7 @@ void eventLoop() {
         char buffer[1024];
         int bytesRead = recv(currFD , buffer , sizeof(buffer) , 0);
         vector<string> tokens = RESPparser(buffer);
-        const char* response = NULL;
+        string response = "";
         upperCase(tokens[0]);
 
         if(bytesRead > 0) {
@@ -177,8 +177,7 @@ void eventLoop() {
             response = "+PONG\r\n";
           }
           else if(tokens[0] == "ECHO") {
-            string resstr = encodeRESP(tokens);
-            response = resstr.c_str();
+            response = encodeRESP(tokens);
           }
           else if(tokens[0] == "SET") {
             response = "+OK\r\n";
@@ -190,15 +189,13 @@ void eventLoop() {
               response = "$-1\r\n";
             }
             else {
-              string resstr = encodeRESP(vector<string> {"GARBAGE" , DATA[tokens[1]].DATA});
-              response = resstr.c_str();
+              response = encodeRESP(vector<string> {"GARBAGE" , DATA[tokens[1]].DATA});
             }
           }
           else if(tokens[0] == "RPUSH") {
             int lsize = handleRPUSH(tokens);
             if(lsize>0) {
-              string resstr = ":"+to_string(lsize)+"\r\n";
-              response = resstr.c_str();
+              response = ":" + to_string(lsize) + "\r\n";
             }
           }
           else if(tokens[0] == "LRANGE") {
@@ -234,13 +231,12 @@ void eventLoop() {
                   temp = temp->next;
                 }
 
-                string resstr = encodeRESP(keys , true);
-                response = resstr.c_str();
+                response = encodeRESP(keys , true);
               }
             }
           }
 
-          send(currFD, response , strlen(response) , 0);
+          send(currFD, response.c_str() , response.size() , 0);
         } 
         else {
           close(currFD);
