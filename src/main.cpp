@@ -89,6 +89,10 @@ string encodeRESP(const vector<string>& str , bool isArr = false) {
   return res;
 }
 
+string encodeRESPint(int val) {
+  return ":"+to_string(val)+"\r\n";
+}
+
 void upperCase(string& str) {
   transform(str.begin(), str.end(), str.begin(),[](unsigned char c){ return std::toupper(c);});
   return;
@@ -203,7 +207,7 @@ void eventLoop() {
           else if(tokens[0] == "RPUSH" || tokens[0] == "LPUSH") {
             int lsize = handlePUSH(tokens , tokens[0][0] == 'R');
             if(lsize>0) {
-              response = ":" + to_string(lsize) + "\r\n";
+              response = encodeRESPint(lsize);
             }
           }
           else if(tokens[0] == "LRANGE") {
@@ -249,6 +253,11 @@ void eventLoop() {
                 response = encodeRESP(keys , true);
               }
             }
+          }
+          else if(tokens[0] == "LLEN") {
+            int lsize = 0;
+            if(LISTS.find(tokens[1]) != LISTS.end()) lsize = LISTS[tokens[1]].size;
+            response = encodeRESPint(lsize);
           }
 
           send(currFD, response.c_str() , response.size() , 0);
