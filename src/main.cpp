@@ -268,10 +268,10 @@ void checkBlockedTimeouts() {
 }
 
 bool checkSTREAMID(string& id) {
-  vector<string> temp;
+  vector<string> tokens;
   stringstream ID(id);
   string str;
-  while(getline(ID,str,'-')) temp.push_back(str);
+  while(getline(ID,str,'-')) tokens.push_back(str);
   if(stoll(tokens[0])>lastSTREAMID.first) {
     lastSTREAMID = make_pair(stoll(tokens[0]) , stoll(tokens[1]));
     return true;
