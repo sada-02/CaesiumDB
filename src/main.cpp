@@ -544,18 +544,19 @@ void eventLoop() {
           }
           else if(tokens[0] == "XRANGE") {
             long long startMS = -1 , startSEQ = -1 , endMS = -1 , endSEQ = -1;
-            stringstream inp = tokens[2];
+            stringstream inp(tokens[2]);
             string str;
             vector<string> seqNum;
-            while(getline(inp,str,"-")) seqNum.push_back(str);
+            while(getline(inp,str,'-')) seqNum.push_back(str);
             startMS = stoll(seqNum[0]);
             if(seqNum.size()>1) startSEQ = stoll(seqNum[1]);
             else startSEQ = 0; 
 
             seqNum.clear();
 
-            inp = tokens[3];
-            while(getline(inp,str,"-")) seqNum.push_back(str);
+            inp.str(tokens[3]);
+            inp.clear();
+            while(getline(inp,str,'-')) seqNum.push_back(str);
             endMS = stoll(seqNum[0]);
             if(seqNum.size()>1) endSEQ = stoll(seqNum[1]);
             else endSEQ = LLONG_MAX; 
