@@ -19,6 +19,9 @@ int serverFD;
 vector<int> clients;
 map<int,struct sockaddr_in> clientINFO;
 
+// Forward declaration
+string encodeRESP(const vector<string>& str , bool isArr = false);
+
 struct metaData {
   string DATA;
   optional<chrono::steady_clock::time_point> expiryTime;
@@ -69,7 +72,7 @@ struct List{
     }
   }
 
-  void handleREQ(string& str) {
+  void handleREQ(const string& str) {
     if(!blocks) return ;
 
     blocklist* temp = blocks;
