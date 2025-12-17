@@ -401,7 +401,7 @@ string handleXRANGE(vector<string>& tokens) {
 }
 
 string handleXREAD(vector<pair<string,string>> keywords) {
-  string res = "*"+to_string(keywords.size())++"\r\n";
+  string res = "*"+to_string(keywords.size())+"\r\n";
   for(int i=0 ;i<keywords.size() ;i++) {
     res += "*2\r\n$"+to_string(keywords[i].first.size())+"\r\n"+keywords[i].first+"\r\n";
     stringstream ID(keywords[i].second);
