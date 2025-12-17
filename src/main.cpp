@@ -325,6 +325,81 @@ bool checkSTREAMID(string& id) {
   return false;
 }
 
+string handleXRANGE(vector<string>& tokens) {
+  long long startMS = -1 , startSEQ = 0 , endMS = -1 , endSEQ = LLONG_MAX;
+  stringstream inp(tokens[2]);
+  string str;
+  vector<string> seqNum;
+  
+  if(tokens[2] == "-") {
+    startMS = 0;
+  }
+  else {
+    while(getline(inp,str,'-')) seqNum.push_back(str);
+    startMS = stoll(seqNum[0]);
+    startSEQ = stoll(seqNum[1]);
+  }
+
+  seqNum.clear();
+  
+  if(tokens[3] == "+") {
+    endMS = LLONG_MAX;
+  }
+  else {
+    inp.str(tokens[3]);
+    inp.clear();
+    while(getline(inp,str,'-')) seqNum.push_back(str);
+    endMS = stoll(seqNum[0]);
+    endSEQ = stoll(seqNum[1]); 
+  }
+  
+  string result = "";
+  int Count = 0;
+  
+  for(auto& m : STREAM[tokens[1]]) {
+    long long ms = m.first;
+    
+    if(ms < startMS) continue;
+    
+    if(ms > endMS) break;
+    
+    for(auto& s : m.second) {
+      long long seq = s.first;
+      
+      bool inRange = false;
+      if(ms == startMS && ms == endMS) {
+        inRange = (seq >= startSEQ && seq <= endSEQ);
+      }
+      else if(ms == startMS) {
+        inRange = (seq >= startSEQ);
+      }
+      else if(ms == endMS) {
+        inRange = (seq <= endSEQ);
+      }
+      else {
+        inRange = true;
+      }
+      
+      if(inRange) {
+        Count++;
+        string id = to_string(ms) + "-" + to_string(seq);
+        result += "*2\r\n"; 
+        result += "$" + to_string(id.size()) + "\r\n" + id + "\r\n";
+        
+        int numKeys = s.second.size() * 2; 
+        result += "*" + to_string(numKeys) + "\r\n";
+        
+        for(auto& kv : s.second) {
+          result += "$" + to_string(kv.first.size()) + "\r\n" + kv.first + "\r\n";
+          result += "$" + to_string(kv.second.size()) + "\r\n" + kv.second + "\r\n";
+        }
+      }
+    }
+  }
+
+  return "*" + to_string(Count) + "\r\n" + result;
+}
+
 string handleTYPE(const vector<string>& tokens) {
   if(DATA.find(tokens[1]) != DATA.end()) {
     return encodeRESPsimpleSTR("string");
@@ -543,78 +618,26 @@ void eventLoop() {
             }
           }
           else if(tokens[0] == "XRANGE") {
-            long long startMS = -1 , startSEQ = 0 , endMS = -1 , endSEQ = LLONG_MAX;
-            stringstream inp(tokens[2]);
-            string str;
-            vector<string> seqNum;
-            
-            if(tokens[2] == "-") {
-              startMS = 0;
-            }
-            else {
-              while(getline(inp,str,'-')) seqNum.push_back(str);
-              startMS = stoll(seqNum[0]);
-              startSEQ = stoll(seqNum[1]);
-            }
-    
-            seqNum.clear();
-            
-            if(tokens[3] == "+") {
-              endMS = LLONG_MAX;
-            }
-            else {
-              inp.str(tokens[3]);
-              inp.clear();
-              while(getline(inp,str,'-')) seqNum.push_back(str);
-              endMS = stoll(seqNum[0]);
-              endSEQ = stoll(seqNum[1]); 
-            }
-            
-            string result = "";
-            int Count = 0;
-            
-            for(auto& m : STREAM[tokens[1]]) {
-              long long ms = m.first;
-              
-              if(ms < startMS) continue;
-              
-              if(ms > endMS) break;
-              
-              for(auto& s : m.second) {
-                long long seq = s.first;
-                
-                bool inRange = false;
-                if(ms == startMS && ms == endMS) {
-                  inRange = (seq >= startSEQ && seq <= endSEQ);
+            response = handleXRANGE(tokens);
+          }
+          else if(tokens[0] == "XREAD") {
+            uppercase(tokens[1]);
+            if(tokens[1] == "STREAMS") {
+                stringstream inp(tokens[3]);
+                string str;
+                vector<string> seqNum;
+                while(getline(inp,str,'-')) seqNum.push_back(str);
+                long long ms = stoll(seqNum[0]) , seq = stoll(seqNum[1]);
+
+                response = "*1\r\n*2\r\n$"+to_string(tokens[2].size())+"\r\n"+tokens[2]+"\r\n*1\r\n";
+                response += "*2\r\n$"+to_string(tokens[3].size())+"\r\n"+tokens[3]+"\r\n*";
+                response += to_string(2*STREAM[tokens[2]][ms][seq].size())+"\r\n";
+
+                for(const auto& kv : STREAM[tokens[2]][ms][seq]) {
+                  response += "$"+to_string(kv.first.size())+"\r\n"+kv.first+"\r\n";
+                  response += "$"+to_string(kv.second.size())+"\r\n"+kv.second+"\r\n";
                 }
-                else if(ms == startMS) {
-                  inRange = (seq >= startSEQ);
-                }
-                else if(ms == endMS) {
-                  inRange = (seq <= endSEQ);
-                }
-                else {
-                  inRange = true;
-                }
-                
-                if(inRange) {
-                  Count++;
-                  string id = to_string(ms) + "-" + to_string(seq);
-                  result += "*2\r\n"; 
-                  result += "$" + to_string(id.size()) + "\r\n" + id + "\r\n";
-                  
-                  int numKeys = s.second.size() * 2; 
-                  result += "*" + to_string(numKeys) + "\r\n";
-                  
-                  for(auto& kv : s.second) {
-                    result += "$" + to_string(kv.first.size()) + "\r\n" + kv.first + "\r\n";
-                    result += "$" + to_string(kv.second.size()) + "\r\n" + kv.second + "\r\n";
-                  }
-                }
-              }
             }
-            
-            response = "*" + to_string(Count) + "\r\n" + result;
           }
           else if(tokens[0] == "TYPE") {
             response = handleTYPE(tokens);
