@@ -325,35 +325,48 @@ bool checkSTREAMID(string& id) {
   return false;
 }
 
-string handleXRANGE(vector<string>& tokens) {
+string handleXRANGE(vector<string>& tokens , bool isXREAD = false) {
   long long startMS = -1 , startSEQ = 0 , endMS = -1 , endSEQ = LLONG_MAX;
   stringstream inp(tokens[2]);
   string str;
   vector<string> seqNum;
   
-  if(tokens[2] == "-") {
-    startMS = 0;
+  if(!isXREAD) {
+    if(tokens[2] == "-") {
+      startMS = 0;
+    }
+    else {
+      while(getline(inp,str,'-')) seqNum.push_back(str);
+      startMS = stoll(seqNum[0]);
+      startSEQ = stoll(seqNum[1]);
+    }
+
+    seqNum.clear();
+    
+    if(tokens[3] == "+") {
+      endMS = LLONG_MAX;
+    }
+    else {
+      inp.str(tokens[3]);
+      inp.clear();
+      while(getline(inp,str,'-')) seqNum.push_back(str);
+      endMS = stoll(seqNum[0]);
+      endSEQ = stoll(seqNum[1]); 
+    }
   }
   else {
     while(getline(inp,str,'-')) seqNum.push_back(str);
     startMS = stoll(seqNum[0]);
-    startSEQ = stoll(seqNum[1]);
-  }
+    startSEQ = stoll(seqNum[1])+1;
 
-  seqNum.clear();
-  
-  if(tokens[3] == "+") {
     endMS = LLONG_MAX;
-  }
-  else {
-    inp.str(tokens[3]);
-    inp.clear();
-    while(getline(inp,str,'-')) seqNum.push_back(str);
-    endMS = stoll(seqNum[0]);
-    endSEQ = stoll(seqNum[1]); 
+    endSEQ = LLONG_MAX;
   }
   
   string result = "";
+  if(isXREAD) {
+    result = "*1\r\n*2\r\n$"+to_string(tokens[1].size())+"\r\n"+tokens[1]+"\r\n*1\r\n";
+  }
   int Count = 0;
   
   for(auto& m : STREAM[tokens[1]]) {
@@ -621,22 +634,10 @@ void eventLoop() {
             response = handleXRANGE(tokens);
           }
           else if(tokens[0] == "XREAD") {
-            upperCase(tokens[1]);
+            upperase(tokens[1]);
             if(tokens[1] == "STREAMS") {
-                stringstream inp(tokens[3]);
-                string str;
-                vector<string> seqNum;
-                while(getline(inp,str,'-')) seqNum.push_back(str);
-                long long ms = stoll(seqNum[0]) , seq = stoll(seqNum[1]);
-
-                response = "*1\r\n*2\r\n$"+to_string(tokens[2].size())+"\r\n"+tokens[2]+"\r\n*1\r\n";
-                response += "*2\r\n$"+to_string(tokens[3].size())+"\r\n"+tokens[3]+"\r\n*";
-                response += to_string(2*STREAM[tokens[2]][ms][seq].size())+"\r\n";
-
-                for(const auto& kv : STREAM[tokens[2]][ms][seq]) {
-                  response += "$"+to_string(kv.first.size())+"\r\n"+kv.first+"\r\n";
-                  response += "$"+to_string(kv.second.size())+"\r\n"+kv.second+"\r\n";
-                }
+              tokens.erase(tokens.begin()+1);
+              response = handleXRANGE(tokens,true);
             }
           }
           else if(tokens[0] == "TYPE") {
