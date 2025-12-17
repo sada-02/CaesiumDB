@@ -420,8 +420,8 @@ string handleXREAD(vector<pair<string,string>> keywords) {
         cnt += ms.second.size();      
       }
       else {
-        for(const auto& seq : STREAM[keywords[i].first][seqNum[0]]) {
-          if(seq.first <= seqNum[0] && !found)  {
+        for(const auto& seq : ms.second) {
+          if(seq.first <= seqNum[1] && !found)  {
             cnt++;
           } 
           else {
@@ -431,9 +431,9 @@ string handleXREAD(vector<pair<string,string>> keywords) {
             found = true;
 
             res += "*2\r\n$"+to_string(keywords[i].second.size())+"\r\n"+keywords[i].second+"\r\n";
-            res += "*"+to_string(STREAM[keywords[i].first][seqNum[0]][seqNum[1]].size()*2)+"\r\n";
+            res += "*"+to_string(seq.second.size()*2)+"\r\n";
             
-            for(const auto& kv : STREAM[keywords[i].first][seqNum[0]][seqNum[1]]) {
+            for(const auto& kv : seq.second) {
               res += "$"+to_string(kv.first.size())+"\r\n"+kv.first+"\r\n";
               res += "$"+to_string(kv.second.size())+"\r\n"+kv.second+"\r\n";
             }
