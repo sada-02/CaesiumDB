@@ -621,7 +621,7 @@ void eventLoop() {
             response = handleXRANGE(tokens);
           }
           else if(tokens[0] == "XREAD") {
-            uppercase(tokens[1]);
+            upperCase(tokens[1]);
             if(tokens[1] == "STREAMS") {
                 stringstream inp(tokens[3]);
                 string str;
