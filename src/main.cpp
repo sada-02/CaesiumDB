@@ -430,7 +430,8 @@ string handleXREAD(vector<pair<string,string>> keywords) {
             }
             found = true;
 
-            res += "*2\r\n$"+to_string(keywords[i].second.size())+"\r\n"+keywords[i].second+"\r\n";
+            res += "*2\r\n$"+to_string(to_string(ms.first).size() + 1 + to_string(seq.first).size())
+            +"\r\n"+to_string(to_string(ms.first) + 1 + to_string(seq.first))+"\r\n";
             res += "*"+to_string(seq.second.size()*2)+"\r\n";
             
             for(const auto& kv : seq.second) {
