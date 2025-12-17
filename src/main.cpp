@@ -634,7 +634,7 @@ void eventLoop() {
             response = handleXRANGE(tokens);
           }
           else if(tokens[0] == "XREAD") {
-            upperase(tokens[1]);
+            upperCase(tokens[1]);
             if(tokens[1] == "STREAMS") {
               tokens.erase(tokens.begin()+1);
               response = handleXRANGE(tokens,true);
