@@ -421,7 +421,7 @@ string handleXREAD(vector<pair<string,string>> keywords) {
       }
       else {
         for(const auto& seq : STREAM[keywords[i].first][seqNum[0]]) {
-          if(seq.first < seqNum[0] && !found)  {
+          if(seq.first <= seqNum[0] && !found)  {
             cnt++;
           } 
           else {
