@@ -433,7 +433,7 @@ string handleXREAD(vector<pair<string,string>> keywords) {
             res += "*2\r\n$"+to_string(keywords[i].second.size())+"\r\n"+keywords[i].second+"\r\n";
             res += "*"+to_string(STREAM[keywords[i].first][seqNum[0]][seqNum[1]].size()*2)+"\r\n";
             
-            for(const auto& kv : STREAM[keywords[i].first][seqNum[0]]) {
+            for(const auto& kv : STREAM[keywords[i].first][seqNum[0]][seqNum[1]]) {
               res += "$"+to_string(kv.first.size())+"\r\n"+kv.first+"\r\n";
               res += "$"+to_string(kv.second.size())+"\r\n"+kv.second+"\r\n";
             }
