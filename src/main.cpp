@@ -325,48 +325,35 @@ bool checkSTREAMID(string& id) {
   return false;
 }
 
-string handleXRANGE(vector<string>& tokens , bool isXREAD = false) {
+string handleXRANGE(vector<string>& tokens) {
   long long startMS = -1 , startSEQ = 0 , endMS = -1 , endSEQ = LLONG_MAX;
   stringstream inp(tokens[2]);
   string str;
   vector<string> seqNum;
   
-  if(!isXREAD) {
-    if(tokens[2] == "-") {
-      startMS = 0;
-    }
-    else {
-      while(getline(inp,str,'-')) seqNum.push_back(str);
-      startMS = stoll(seqNum[0]);
-      startSEQ = stoll(seqNum[1]);
-    }
-
-    seqNum.clear();
-    
-    if(tokens[3] == "+") {
-      endMS = LLONG_MAX;
-    }
-    else {
-      inp.str(tokens[3]);
-      inp.clear();
-      while(getline(inp,str,'-')) seqNum.push_back(str);
-      endMS = stoll(seqNum[0]);
-      endSEQ = stoll(seqNum[1]); 
-    }
+  if(tokens[2] == "-") {
+    startMS = 0;
   }
   else {
     while(getline(inp,str,'-')) seqNum.push_back(str);
     startMS = stoll(seqNum[0]);
-    startSEQ = stoll(seqNum[1])+1;
+    startSEQ = stoll(seqNum[1]);
+  }
 
+  seqNum.clear();
+  
+  if(tokens[3] == "+") {
     endMS = LLONG_MAX;
-    endSEQ = LLONG_MAX;
+  }
+  else {
+    inp.str(tokens[3]);
+    inp.clear();
+    while(getline(inp,str,'-')) seqNum.push_back(str);
+    endMS = stoll(seqNum[0]);
+    endSEQ = stoll(seqNum[1]); 
   }
   
   string result = "";
-  if(isXREAD) {
-    result = "*1\r\n*2\r\n$"+to_string(tokens[1].size())+"\r\n"+tokens[1]+"\r\n*1\r\n";
-  }
   int Count = 0;
   
   for(auto& m : STREAM[tokens[1]]) {
@@ -412,6 +399,52 @@ string handleXRANGE(vector<string>& tokens , bool isXREAD = false) {
 
   return "*" + to_string(Count) + "\r\n" + result;
 }
+
+string handleXREAD(vector<pair<string,string>> keywords) {
+  string res = "*"+to_string(keywords.size())++"\r\n";
+  for(int i=0 ;i<keywords.size() ;i++) {
+    res += "*2\r\n$"+to_string(keywords[i].first.size())+"\r\n"+keywords[i].first+"\r\n";
+    stringstream ID(keywords[i].second);
+    string str;
+    vector<long long> seqNum;
+    while(getline(ID,str,'-')) seqNum.push_back(stoll(str));
+    
+    int cnt = 0 , tcnt = 0;
+    for(const auto& ms : STREAM[keywords[i].first]) {
+      tcnt += ms.second.size();
+    }
+
+    bool found = false;
+    for(const auto& ms : STREAM[keywords[i].first]) {
+      if(ms.first < seqNum[0]) {
+        cnt += ms.second.size();      
+      }
+      else {
+        for(const auto& seq : STREAM[keywords[i].first][seqNum[0]]) {
+          if(seq.first < seqNum[0] && !found)  {
+            cnt++;
+          } 
+          else {
+            if(!found) {
+              res += "*"+to_string(tcnt-cnt)+"\r\n";
+            }
+            found = true;
+
+            res += "*2\r\n$"+to_string(keywords[i].second.size())+"\r\n"+keywords[i].second+"\r\n";
+            res += "*"+to_string(STREAM[keywords[i].first][seqNum[0]][seqNum[1]].size()*2)+"\r\n";
+            
+            for(const auto& kv : STREAM[keywords[i].first][seqNum[0]]) {
+              res += "$"+to_string(kv.first.size())+"\r\n"+kv.first+"\r\n";
+              res += "$"+to_string(kv.second.size())+"\r\n"+kv.second+"\r\n";
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return res;
+} 
 
 string handleTYPE(const vector<string>& tokens) {
   if(DATA.find(tokens[1]) != DATA.end()) {
@@ -636,8 +669,13 @@ void eventLoop() {
           else if(tokens[0] == "XREAD") {
             upperCase(tokens[1]);
             if(tokens[1] == "STREAMS") {
-              tokens.erase(tokens.begin()+1);
-              response = handleXRANGE(tokens,true);
+              int numKeys = (tokens.size()-2)/2;
+              vector<pair<string,string>> keyID;
+              for(int i=0;i<numKeys;i++) {
+                keyID.push_back({tokens[2+i],tokens[2+i+numKeys]});
+              }
+
+              response = handleXREAD(keyID);
             }
           }
           else if(tokens[0] == "TYPE") {
