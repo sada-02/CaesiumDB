@@ -1205,49 +1205,14 @@ void eventLoop()
           sendResponse = false;
         }
 
-        vector<vector<string>> multipleCommands = parseMultipleRESP(buffer, bytesRead);
-
-        if (!multipleCommands.empty())
+        if (isFromMaster && bytesRead > 0)
         {
+          vector<vector<string>> multipleCommands = parseMultipleRESP(buffer, bytesRead);
+
           for (auto &tokens : multipleCommands)
           {
             if (tokens.empty())
               continue;
-
-            string response = "";
-            bool isINFO = false, isREP = false;
-
-            if (tokens[0] == "-p")
-            {
-              upperCase(tokens[2]);
-              if (tokens[2] == "INFO")
-              {
-                isINFO = true;
-                if (tokens.size() > 3)
-                {
-                  upperCase(tokens[3]);
-                  if (tokens[3] == "REPLICATION")
-                  {
-                    isREP = true;
-                  }
-                }
-              }
-            }
-
-            upperCase(tokens[0]);
-
-            if (tokens[0] == "INFO")
-            {
-              isINFO = true;
-              if (tokens.size() > 1)
-              {
-                upperCase(tokens[1]);
-                if (tokens[1] == "REPLICATION")
-                {
-                  isREP = true;
-                }
-              }
-            }
 
             cout << "Tokens[" << tokens.size() << "]: ";
             for (const auto &t : tokens)
@@ -1256,92 +1221,139 @@ void eventLoop()
             }
             cout << endl;
 
-            if (isINFO)
-            {
-              response = handleINFO(isREP);
-            }
-            else if (tokens[0] == "REPLCONF")
-            {
-              response = encodeRESPsimpleSTR("OK");
-            }
-            else if (tokens[0] == "PSYNC")
-            {
-              response = encodeRESPsimpleSTR("FULLRESYNC " + info.replicationID + " " +
-                                             info.replicationOffset);
-              send(currFD, response.c_str(), response.size(), 0);
+            bool dummyResponse = false;
+            string response = generateResponse(tokens, dummyResponse, currFD);
+          }
+        }
+        else if (bytesRead > 0)
+        {
+          vector<string> tokens = RESPparser(buffer);
+          string response = "";
 
-              const unsigned char emptyRDB[] = {
-                  0x52, 0x45, 0x44, 0x49, 0x53, 0x30, 0x30, 0x31, 0x31, 0xfa, 0x09, 0x72, 0x65, 0x64, 0x69, 0x73,
-                  0x2d, 0x76, 0x65, 0x72, 0x05, 0x37, 0x2e, 0x32, 0x2e, 0x30, 0xfa, 0x0a, 0x72, 0x65, 0x64, 0x69,
-                  0x73, 0x2d, 0x62, 0x69, 0x74, 0x73, 0xc0, 0x40, 0xfa, 0x05, 0x63, 0x74, 0x69, 0x6d, 0x65, 0xc2,
-                  0x6d, 0x08, 0xbc, 0x65, 0xfa, 0x08, 0x75, 0x73, 0x65, 0x64, 0x2d, 0x6d, 0x65, 0x6d, 0xc2, 0xb0,
-                  0xc4, 0x10, 0x00, 0xfa, 0x08, 0x61, 0x6f, 0x66, 0x2d, 0x62, 0x61, 0x73, 0x65, 0xc0, 0x00, 0xff,
-                  0xf0, 0x6e, 0x3b, 0xfe, 0xc0, 0xff, 0x5a, 0xa2};
-              response = "$" + to_string(sizeof(emptyRDB)) + "\r\n";
-              send(currFD, response.c_str(), response.size(), 0);
-              send(currFD, emptyRDB, sizeof(emptyRDB), 0);
+          bool isINFO = false, isREP = false;
+          if (tokens[0] == "-p")
+          {
+            upperCase(tokens[2]);
+            if (tokens[2] == "INFO")
+            {
+              isINFO = true;
+              if (tokens.size() > 3)
+              {
+                upperCase(tokens[3]);
+                if (tokens[3] == "REPLICATION")
+                {
+                  isREP = true;
+                }
+              }
+            }
+          }
 
-              replicas.insert(currFD);
-              sendResponse = false;
-            }
-            else if (tokens[0] == "DISCARD")
+          upperCase(tokens[0]);
+
+          if (tokens[0] == "INFO")
+          {
+            isINFO = true;
+            if (tokens.size() > 1)
             {
-              if (onQueue.find(currFD) == onQueue.end())
+              upperCase(tokens[1]);
+              if (tokens[1] == "REPLICATION")
               {
-                response = encodeRESPsimpleERR("ERR DISCARD without MULTI");
-              }
-              else
-              {
-                response = encodeRESPsimpleSTR("OK");
-                onQueue.erase(currFD);
+                isREP = true;
               }
             }
-            else if (tokens[0] == "EXEC")
+          }
+
+          cout << "Tokens[" << tokens.size() << "]: ";
+          for (const auto &t : tokens)
+          {
+            cout << "\"" << t << "\" ";
+          }
+          cout << endl;
+
+          if (isINFO)
+          {
+            response = handleINFO(isREP);
+          }
+          else if (tokens[0] == "REPLCONF")
+          {
+            response = encodeRESPsimpleSTR("OK");
+          }
+          else if (tokens[0] == "PSYNC")
+          {
+            response = encodeRESPsimpleSTR("FULLRESYNC " + info.replicationID + " " +
+                                           info.replicationOffset);
+            send(currFD, response.c_str(), response.size(), 0);
+
+            const unsigned char emptyRDB[] = {
+                0x52, 0x45, 0x44, 0x49, 0x53, 0x30, 0x30, 0x31, 0x31, 0xfa, 0x09, 0x72, 0x65, 0x64, 0x69, 0x73,
+                0x2d, 0x76, 0x65, 0x72, 0x05, 0x37, 0x2e, 0x32, 0x2e, 0x30, 0xfa, 0x0a, 0x72, 0x65, 0x64, 0x69,
+                0x73, 0x2d, 0x62, 0x69, 0x74, 0x73, 0xc0, 0x40, 0xfa, 0x05, 0x63, 0x74, 0x69, 0x6d, 0x65, 0xc2,
+                0x6d, 0x08, 0xbc, 0x65, 0xfa, 0x08, 0x75, 0x73, 0x65, 0x64, 0x2d, 0x6d, 0x65, 0x6d, 0xc2, 0xb0,
+                0xc4, 0x10, 0x00, 0xfa, 0x08, 0x61, 0x6f, 0x66, 0x2d, 0x62, 0x61, 0x73, 0x65, 0xc0, 0x00, 0xff,
+                0xf0, 0x6e, 0x3b, 0xfe, 0xc0, 0xff, 0x5a, 0xa2};
+            response = "$" + to_string(sizeof(emptyRDB)) + "\r\n";
+            send(currFD, response.c_str(), response.size(), 0);
+            send(currFD, emptyRDB, sizeof(emptyRDB), 0);
+
+            replicas.insert(currFD);
+            sendResponse = false;
+          }
+          else if (tokens[0] == "DISCARD")
+          {
+            if (onQueue.find(currFD) == onQueue.end())
             {
-              if (onQueue.find(currFD) == onQueue.end())
-              {
-                response = encodeRESPsimpleERR("ERR EXEC without MULTI");
-              }
-              else
-              {
-                vector<string> execRes;
-                for (int j = 0; j < onQueue[currFD].size(); j++)
-                {
-                  vector<string> cmdTokens = onQueue[currFD][j];
-                  string res = generateResponse(cmdTokens, sendResponse, currFD);
-                  if (sendResponse)
-                    execRes.push_back(res);
-                }
-                response = "*" + to_string(execRes.size()) + "\r\n";
-                for (const auto &r : execRes)
-                {
-                  response += r;
-                }
-                onQueue.erase(currFD);
-              }
-            }
-            else if (onQueue.find(currFD) != onQueue.end())
-            {
-              onQueue[currFD].push_back(tokens);
-              response = encodeRESPsimpleSTR("QUEUED");
+              response = encodeRESPsimpleERR("ERR DISCARD without MULTI");
             }
             else
             {
-              response = generateResponse(tokens, sendResponse, currFD);
+              response = encodeRESPsimpleSTR("OK");
+              onQueue.erase(currFD);
             }
-
-            if (sendResponse)
-              send(currFD, response.c_str(), response.size(), 0);
           }
+          else if (tokens[0] == "EXEC")
+          {
+            if (onQueue.find(currFD) == onQueue.end())
+            {
+              response = encodeRESPsimpleERR("ERR EXEC without MULTI");
+            }
+            else
+            {
+              vector<string> execRes;
+              for (int j = 0; j < onQueue[currFD].size(); j++)
+              {
+                vector<string> cmdTokens = onQueue[currFD][j];
+                string res = generateResponse(cmdTokens, sendResponse, currFD);
+                if (sendResponse)
+                  execRes.push_back(res);
+              }
+              response = "*" + to_string(execRes.size()) + "\r\n";
+              for (const auto &r : execRes)
+              {
+                response += r;
+              }
+              onQueue.erase(currFD);
+            }
+          }
+          else if (onQueue.find(currFD) != onQueue.end())
+          {
+            onQueue[currFD].push_back(tokens);
+            response = encodeRESPsimpleSTR("QUEUED");
+          }
+          else
+          {
+            response = generateResponse(tokens, sendResponse, currFD);
+          }
+
+          if (sendResponse)
+            send(currFD, response.c_str(), response.size(), 0);
         }
-        else if (bytesRead <= 0)
+        else
         {
 
           close(currFD);
           clients.erase(clients.begin() + i);
           clientINFO.erase(currFD);
           replicas.erase(currFD);
-          sendResponse = false;
         }
       }
     }
