@@ -902,7 +902,6 @@ void eventLoop() {
 
         if(isINFO) {
          response = handleINFO(isREP);
-          send(currFD,response.c_str(),response.size(),0);
         }
         else if(tokens[0] == "DISCARD") {
           if(onQueue.find(currFD) == onQueue.end()) {
@@ -912,8 +911,6 @@ void eventLoop() {
             response = encodeRESPsimpleSTR("OK");
             onQueue.erase(currFD);
           }
-
-          send(currFD , response.c_str() , response.size() , 0);
         }
         else if(tokens[0] == "EXEC") {
           if(onQueue.find(currFD) == onQueue.end()) {
@@ -932,26 +929,24 @@ void eventLoop() {
             }
             onQueue.erase(currFD);
           }
-
-          send(currFD, response.c_str() , response.size() , 0);
         }
         else if(onQueue.find(currFD) != onQueue.end()) {
           onQueue[currFD].push_back(tokens);
           response = encodeRESPsimpleSTR("QUEUED");
-          send(currFD, response.c_str() , response.size() , 0);
         }
         else {
           if(bytesRead > 0) {
             response = generateResponse(tokens,sendResponse,currFD);
-
-            if(sendResponse) send(currFD, response.c_str() , response.size() , 0);
           } 
           else {
             close(currFD);
             clients.erase(clients.begin() + i);
             clientINFO.erase(currFD);
+            sendResponse = false;
           }
         }
+
+        if(sendResponse) send(currFD, response.c_str() , response.size() , 0);
         tokens.clear();
       }
     }
