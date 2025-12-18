@@ -576,7 +576,7 @@ string handleTYPE(const vector<string>& tokens) {
   }
 }
 
-string generateResponse(vector<string>& tokens , bool& sendResponse) {
+string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD) {
   string response = "";
 
   if(tokens[0] == "PING") {
@@ -869,7 +869,7 @@ void eventLoop() {
             vector<string> execRes;
             for(int i=0 ;i<onQueue.size() ;i++) {
               tokens = onQueue[i];
-              string res = generateResponse(tokens,sendResponse);
+              string res = generateResponse(tokens,sendResponse,currFD);
               if(sendResponse) execRes.push_back(res);
             }
             response = "*"+to_string(execRes.size())+"\r\n";
@@ -884,7 +884,7 @@ void eventLoop() {
         }
         else {
           if(bytesRead > 0) {
-            generateResponse(tokens,sendResponse);
+            generateResponse(tokens,sendResponse,currFD);
 
           if(sendResponse) send(currFD, response.c_str() , response.size() , 0);
           } 
