@@ -233,6 +233,10 @@ string encodeRESPsimpleERR(const string& str) {
   return "-"+str+"\r\n";
 }
 
+string decodeRESPsimple(const char* str) {
+  return string(str).substr(1,str.size()-3);
+}
+
 void upperCase(string& str) {
   transform(str.begin(), str.end(), str.begin(),[](unsigned char c){ return std::toupper(c);});
   return;
@@ -1054,7 +1058,7 @@ int main(int argc, char **argv) {
     
     char buffer[1024];
     int bytesRead;
-    vector<string> tokens;
+    string response;
 
     string handshake = "*1\r\n$4\r\nPING\r\n";
     send(masterFD, handshake.c_str(), handshake.size(), 0);
@@ -1063,10 +1067,10 @@ int main(int argc, char **argv) {
     if(bytesRead > 0) {
       buffer[bytesRead] = '\0';
     }
-    tokens = RESPparser(buffer);
-    upperCase(tokens[0]);
+    response = decodeRESPsimple(buffer);
+    upperCase(response);
 
-    if(tokens[0] == "PONG") {
+    if(response == "PONG") {
       handshake = "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$" + to_string(to_string(PORT).size())
       + "\r\n"+ to_string(PORT) +"\r\n";  
       send(masterFD, handshake.c_str(), handshake.size(), 0); 
@@ -1076,10 +1080,10 @@ int main(int argc, char **argv) {
     if(bytesRead > 0) {
       buffer[bytesRead] = '\0';
     }
-    tokens = RESPparser(buffer);
-    upperCase(tokens[0]);
+    response = decodeRESPsimple(buffer);
+    upperCase(response);
 
-    if(tokens[0] == "OK") {
+    if(response == "OK") {
       handshake = "*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n";
       send(masterFD, handshake.c_str(), handshake.size(), 0);
     }
