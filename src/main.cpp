@@ -20,6 +20,7 @@ int serverFD;
 vector<int> clients;
 map<int,struct sockaddr_in> clientINFO;
 map<int,vector<vector<string>>> onQueue;
+bool isMaster = true;
 
 string encodeRESP(const vector<string>& str , bool isArr = false);
 pair<map<long long, map<long, map<string,string>>>, int> checkIDExists(const string& key, string& id);
@@ -787,7 +788,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
 string handleINFO(bool isREP=true) {
   string response = "";
   if(isREP) {
-    response+="$11\r\nrole:master\r\n";
+    response+="$11\r\nrole:" + (isMaster ? "master" : "slave") + "\r\n";
   }
 
   return response;
@@ -978,6 +979,9 @@ int main(int argc, char **argv) {
     if(string(argv[i]) == "--port" && i+1 < argc) {
       PORT = stoi(argv[i+1]);
       break;
+    }
+    else if(string(argv[i]) == "--replicaof") {
+      isMaster = false;
     }
   }
   server_addr.sin_port = htons(PORT);
