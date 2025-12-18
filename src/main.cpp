@@ -800,9 +800,9 @@ string handleINFO(bool isREP=true) {
   string response = "";
   if(isREP) {
     response+="$" + string(isMaster ? "11" : "10") + "\r\nrole:" + string(isMaster ? "master" : "slave") + "\r\n";
-    response+="$" + string(info.replicationID.size()+string("master_replid").size()) + 
+    response+="$" + to_string(info.replicationID.size()+string("master_replid").size()) + 
     "\r\nmaster_replid:" + info.replicationID + "\r\n";
-    response+="$" + string(info.replicationOffset.size()+string("master_repl_offset").size()) + 
+    response+="$" + to_string(info.replicationOffset.size()+string("master_repl_offset").size()) + 
     "\r\nmaster_repl_offset:" + info.replicationOffset + "\r\n";
   }
 
