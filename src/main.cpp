@@ -658,7 +658,7 @@ void eventLoop() {
         }
         cout << endl;
 
-        if(onQueue.find(currFD)) {
+        if(onQueue.find(currFD) != onQueue.end()) {
           onQueue[currFD].push_back(tokens);
           response = encodeRESPsimpleSTR("QUEUED");
           send(currFD, response.c_str() , response.size() , 0);
