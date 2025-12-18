@@ -874,6 +874,19 @@ void eventLoop() {
       }
     }
     
+    for(const auto& s : STREAM) {
+      blocklist* temp = s.second.blocks;
+      while(temp) {
+        if(!temp->indef) {
+          if(!hasTimeout || temp->timeout < leastTime) {
+            leastTime = temp->timeout;
+            hasTimeout = true;
+          }
+        }
+        temp = temp->next;
+      }
+    }
+    
     struct timeval timeout;
     if(hasTimeout) {
       auto remTime = leastTime - now;
@@ -976,6 +989,9 @@ void eventLoop() {
           send(currFD, emptyRDB, sizeof(emptyRDB), 0);
 
           replicas.insert(currFD);
+          
+          clients.erase(clients.begin() + i);
+          clientINFO.erase(currFD);
 
           sendResponse = false;
         }
