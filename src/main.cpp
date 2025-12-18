@@ -928,7 +928,8 @@ void eventLoop() {
           response = encodeRESPsimpleSTR("OK");
         }
         else if(tokens[0] == "PSYNC") {
-          response = encodeRESPsimpleSTR("FULLRESYNC " + info.replicationID + " " + info.replicationOffset)
+          response = encodeRESPsimpleSTR("FULLRESYNC " + info.replicationID + " " +
+             info.replicationOffset);
         }
         else if(tokens[0] == "DISCARD") {
           if(onQueue.find(currFD) == onQueue.end()) {
