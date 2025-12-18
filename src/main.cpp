@@ -835,12 +835,17 @@ void eventLoop() {
             response = handleTYPE(tokens);
           }
           else if(tokens[0] == "INCR") {
-            try {
-              int val = stoi(DATA[tokens[1]].DATA);
-              DATA[tokens[1]].DATA = to_string(val+1);
-              response = encodeRESPint(val+1);
+            if(DATA.find(tokens[1]) == DATA.end()) {
+              response = encodeRESPint(1);
             }
-            catch(...) {}
+            else {
+              try {
+                int val = stoi(DATA[tokens[1]].DATA);
+                DATA[tokens[1]].DATA = to_string(val+1);
+                response = encodeRESPint(val+1);
+              }
+              catch(...) {}
+            }
           }
 
         if(sendResponse) send(currFD, response.c_str() , response.size() , 0);
