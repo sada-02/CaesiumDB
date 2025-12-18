@@ -834,6 +834,13 @@ void eventLoop() {
           else if(tokens[0] == "TYPE") {
             response = handleTYPE(tokens);
           }
+          else if(tokens[0] == "INCR") {
+            try {
+              int val = stoi(DATA[tokens[1]].DATA);
+              DATA[tokens[1]].DATA = to_string(val+1);
+            }
+            catch(...) {}
+          }
 
         if(sendResponse) send(currFD, response.c_str() , response.size() , 0);
         } 
