@@ -658,7 +658,12 @@ void eventLoop() {
         }
         cout << endl;
 
-        if(onQueue.find(currFD) != onQueue.end()) {
+        if(tokens[0] == "EXEC") {
+          if(OnQueue.find(currFD) != onQueue.end()) {
+            response = encodeRESPsimpleERR("ERR EXEC without MULTI");
+          }
+        }
+        else if(onQueue.find(currFD) != onQueue.end()) {
           onQueue[currFD].push_back(tokens);
           response = encodeRESPsimpleSTR("QUEUED");
           send(currFD, response.c_str() , response.size() , 0);
