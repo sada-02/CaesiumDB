@@ -1054,7 +1054,7 @@ int main(int argc, char **argv) {
     
     string handshake = "*1\r\n$4\r\nPING\r\n";
     send(masterFD, handshake.c_str(), handshake.size(), 0);
-    handshake = "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$" + to_string(masterPort.size())
+    handshake = "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$" + to_string(to_string(masterPort).size())
     + "\r\n"+ masterPort +"\r\n";
     send(masterFD, handshake.c_str(), handshake.size(), 0);
     handshake = "*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n";
