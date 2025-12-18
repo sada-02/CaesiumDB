@@ -990,15 +990,25 @@ int main(int argc, char **argv) {
   server_addr.sin_family = AF_INET;
   server_addr.sin_addr.s_addr = INADDR_ANY;
   
-  int PORT = 6379; 
+  int PORT = 6379;
+  string masterHost = "";
+  int masterPort = 0;
+  
   for(int i=1; i<argc; i++) {
     if(string(argv[i]) == "--port" && i+1 < argc) {
       PORT = stoi(argv[i+1]);
     }
-    else if(string(argv[i]) == "--replicaof") {
+    else if(string(argv[i]) == "--replicaof" && i+1 < argc) {
       info.isMaster = false;
+      string masterInfo = argv[i+1];
+      size_t spacePos = masterInfo.find(' ');
+      if(spacePos != string::npos) {
+        masterHost = masterInfo.substr(0, spacePos);
+        masterPort = stoi(masterInfo.substr(spacePos + 1));
+      }
     }
   }
+  
   server_addr.sin_port = htons(PORT);
   info.replicationID = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
   info.replicationOffset = "0";
@@ -1012,6 +1022,35 @@ int main(int argc, char **argv) {
   if (listen(serverFD, connection_backlog) != 0) {
     cerr << "listen failed\n";
     return 1;
+  }
+  
+  if(!info.isMaster && !masterHost.empty()) {
+    int masterFD = socket(AF_INET, SOCK_STREAM, 0);
+    if(masterFD < 0) {
+      cerr << "Failed to create master socket\n";
+      return 1;
+    }
+    
+    struct sockaddr_in master_addr;
+    master_addr.sin_family = AF_INET;
+    master_addr.sin_port = htons(masterPort);
+    
+    if(inet_pton(AF_INET, masterHost.c_str(), &master_addr.sin_addr) <= 0) {
+      struct hostent *he = gethostbyname(masterHost.c_str());
+      if(he == NULL) {
+        cerr << "Failed to resolve master hostname\n";
+        return 1;
+      }
+      memcpy(&master_addr.sin_addr, he->h_addr_list[0], he->h_length);
+    }
+    
+    if(connect(masterFD, (struct sockaddr*)&master_addr, sizeof(master_addr)) < 0) {
+      cerr << "Failed to connect to master\n";
+      return 1;
+    }
+    
+    string query = "*1\r\n$4\r\nPING\r\n";
+    send(masterFD, query.c_str(), query.size(), 0);
   }
   
   eventLoop();
