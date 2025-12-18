@@ -837,6 +837,7 @@ void eventLoop() {
           else if(tokens[0] == "INCR") {
             if(DATA.find(tokens[1]) == DATA.end()) {
               response = encodeRESPint(1);
+              DATA[tokens[1]].DATA = "1";
             }
             else {
               try {
