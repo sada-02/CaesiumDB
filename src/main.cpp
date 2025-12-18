@@ -874,19 +874,6 @@ void eventLoop() {
       }
     }
     
-    for(const auto& s : STREAM) {
-      blocklist* temp = s.second.blocks;
-      while(temp) {
-        if(!temp->indef) {
-          if(!hasTimeout || temp->timeout < leastTime) {
-            leastTime = temp->timeout;
-            hasTimeout = true;
-          }
-        }
-        temp = temp->next;
-      }
-    }
-    
     struct timeval timeout;
     if(hasTimeout) {
       auto remTime = leastTime - now;
@@ -925,10 +912,6 @@ void eventLoop() {
       bool sendResponse = true;
 
       if(FD_ISSET(currFD , &readFDs)) {
-        if(replicas.find(currFD) != replicas.end()) {
-          continue;
-        }
-        
         char buffer[1024];
         int bytesRead = recv(currFD , buffer , sizeof(buffer) , 0);
         if(bytesRead > 0) {
@@ -1032,10 +1015,11 @@ void eventLoop() {
             response = generateResponse(tokens,sendResponse,currFD);
           } 
           else {
-            close(currFD);
-            clients.erase(clients.begin() + i);
-            clientINFO.erase(currFD);
-            replicas.erase(currFD);
+            if(replicas.find(currFD) == replicas.end()) {
+              close(currFD);
+              clients.erase(clients.begin() + i);
+              clientINFO.erase(currFD);
+            }
             sendResponse = false;
           }
         }
