@@ -22,6 +22,7 @@ map<int,struct sockaddr_in> clientINFO;
 pair<long long,long long> lastSTREAMID;
 
 string encodeRESP(const vector<string>& str , bool isArr = false);
+pair<map<long long, map<long, map<string,string>>>, int> checkIDExists(const string& key, string& id);
 
 struct metaData {
   string DATA;
@@ -100,7 +101,7 @@ struct List{
 };
 
 struct StreamList{
-  map<long,long,map<long long,map<string,string>>> DATA;
+  map<long long, map<long, map<string,string>>> DATA;
   blocklist* blocks;
 
   void insert(int cFD , chrono::steady_clock::time_point t , bool flag = false , string id = "") {
@@ -528,12 +529,12 @@ string handleXREAD(vector<pair<string,string>> keywords) {
   return res;
 } 
 
-pair<map<long long,map<long,long,map<string,string>>>,int> checkIDExists(const string& key , string& id) {
+pair<map<long long, map<long, map<string,string>>>, int> checkIDExists(const string& key , string& id) {
   stringstream ID(id);
   string str;
   vector<long long> seqNum;
   while(getline(ID,str,'-')) seqNum.push_back(stoll(str));
-  map<long long,map<long,long,map<string,string>>> res;
+  map<long long, map<long, map<string,string>>> res;
   int cnt = 0;
 
   for(const auto& ms : STREAM[key].DATA) {
@@ -544,7 +545,7 @@ pair<map<long long,map<long,long,map<string,string>>>,int> checkIDExists(const s
       for(const auto& seq : ms.second) {
         if(seq.first <= seqNum[1] && ms.first == seqNum[0]) continue;
         
-        res[seqNum[0]][seqNum[1]] = seq.second;
+        res[ms.first][seq.first] = seq.second;
         cnt++;
       }
     }
@@ -787,6 +788,7 @@ void eventLoop() {
             }
             else if(tokens[1] == "BLOCK") {
               auto timeoutDuration = chrono::milliseconds(static_cast<long long>(stod(tokens[2])));
+              auto timeoutPoint = chrono::steady_clock::now() + timeoutDuration;
               
               auto [idFound,cnt] = checkIDExists(tokens[4],tokens[5]);
               if(!idFound.empty()) {
@@ -809,7 +811,7 @@ void eventLoop() {
                 response = res;
               }
               else {
-                STREAM[tokens[4]].insert(currFD,timeoutDuration,false,tokens[5]);
+                STREAM[tokens[4]].insert(currFD,timeoutPoint,false,tokens[5]);
                 sendResponse = false;
               }
             }
