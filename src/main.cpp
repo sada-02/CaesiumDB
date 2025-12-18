@@ -901,8 +901,6 @@ void eventLoop() {
       if(bytesRead > 0) {
         buffer[bytesRead] = '\0';
         
-        cout << "Received from master: " << bytesRead << " bytes" << endl;
-        
         int pos = 0;
         while(pos < bytesRead) {
           if(buffer[pos] == '*') {
@@ -933,13 +931,7 @@ void eventLoop() {
             string cmdStr(buffer + cmdStart, cmdEnd - cmdStart);
             vector<string> tokens = RESPparser(cmdStr.c_str());
             
-            if(!tokens.empty()) {
-              cout << "Processing from master - Tokens[" << tokens.size() << "]: ";
-              for(const auto& t : tokens) {
-                cout << "\"" << t << "\" ";
-              }
-              cout << endl;
-              
+            if(!tokens.empty()) {              
               upperCase(tokens[0]);
               
               bool sendResponse = false;
