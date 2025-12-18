@@ -19,7 +19,6 @@ using namespace std;
 int serverFD;
 vector<int> clients;
 map<int,struct sockaddr_in> clientINFO;
-pair<long long,long long> lastSTREAMID;
 
 string encodeRESP(const vector<string>& str , bool isArr = false);
 pair<map<long long, map<long, map<string,string>>>, int> checkIDExists(const string& key, string& id);
@@ -103,6 +102,11 @@ struct List{
 struct StreamList{
   map<long long, map<long, map<string,string>>> DATA;
   blocklist* blocks;
+  pair<long long,long long> lastSTREAMID;
+
+  StreamList() {
+    lastSTREAMID = {0,0};
+  }
 
   void insert(int cFD , chrono::steady_clock::time_point t , bool flag = false , string id = "") {
     if(!blocks) {
@@ -359,14 +363,14 @@ void completeID(vector<string>& tokens) {
     long long ms = std::chrono::duration_cast<std::chrono::milliseconds>(
       std::chrono::system_clock::now().time_since_epoch()
     ).count();
-    if(ms == lastSTREAMID.first) {
-      lastSTREAMID.second++;
+    if(ms == STREAM[tokens[0]].lastSTREAMID.first) {
+      STREAM[tokens[0]].lastSTREAMID.second++;
     }
     else {
-      lastSTREAMID.first = ms;
-      lastSTREAMID.second = 0;
+      STREAM[tokens[0]].lastSTREAMID.first = ms;
+      STREAM[tokens[0]].lastSTREAMID.second = 0;
     }
-    tokens[2] = to_string(lastSTREAMID.first)+"-"+to_string(lastSTREAMID.second);
+    tokens[2] = to_string(STREAM[tokens[0]].lastSTREAMID.first)+"-"+to_string(STREAM[tokens[0]].lastSTREAMID.second);
   }
   else {
     vector<string> seqNum;
@@ -375,20 +379,20 @@ void completeID(vector<string>& tokens) {
     while(getline(ID,str,'-')) seqNum.push_back(str);
     
     if(seqNum[1] == "*") {
-      if(lastSTREAMID.first == stoll(seqNum[0])) {
-        lastSTREAMID.second = lastSTREAMID.second+1;
+      if(STREAM[tokens[0]].lastSTREAMID.first == stoll(seqNum[0])) {
+        STREAM[tokens[0]].lastSTREAMID.second = STREAM[tokens[0]].lastSTREAMID.second+1;
       }
       else {
-        lastSTREAMID.first = stoll(seqNum[0]);
-        lastSTREAMID.second = 0;
+        STREAM[tokens[0]].lastSTREAMID.first = stoll(seqNum[0]);
+        STREAM[tokens[0]].lastSTREAMID.second = 0;
       }
 
-      tokens[2] = to_string(lastSTREAMID.first)+"-"+to_string(lastSTREAMID.second);
+      tokens[2] = to_string(STREAM[tokens[0]].lastSTREAMID.first)+"-"+to_string(STREAM[tokens[0]].lastSTREAMID.second);
     }
   }
 }
 
-bool checkSTREAMID(string& id) {
+bool checkSTREAMID(string& id , const string& KEY) {
   if(id == "*") return true;
   
   vector<string> tokens;
@@ -397,13 +401,13 @@ bool checkSTREAMID(string& id) {
   while(getline(ID,str,'-')) tokens.push_back(str);
   if(tokens[1] == "*") return true;
 
-  if(stoll(tokens[0])>lastSTREAMID.first) {
-    lastSTREAMID = make_pair(stoll(tokens[0]) , stoll(tokens[1]));
+  if(stoll(tokens[0])>STREAM[KEY].lastSTREAMID.first) {
+    STREAM[KEY].lastSTREAMID = make_pair(stoll(tokens[0]) , stoll(tokens[1]));
     return true;
   }
-  else if(stoll(tokens[0]) == lastSTREAMID.first) {
-    if(stoll(tokens[1]) > lastSTREAMID.second) {
-      lastSTREAMID = make_pair(stoll(tokens[0]) , stoll(tokens[1]));
+  else if(stoll(tokens[0]) == STREAM[KEY].lastSTREAMID.first) {
+    if(stoll(tokens[1]) > STREAM[KEY].lastSTREAMID.second) {
+      STREAM[KEY].lastSTREAMID = make_pair(stoll(tokens[0]) , stoll(tokens[1]));
       return true; 
     }
   }
@@ -762,14 +766,14 @@ void eventLoop() {
             if(tokens[2] == "0-0") {
               response = encodeRESPsimpleERR("ERR The ID specified in XADD must be greater than 0-0");
             }
-            else if(!checkSTREAMID(tokens[2])) {
+            else if(!checkSTREAMID(tokens[2] , tokens[1])) {
               response = encodeRESPsimpleERR("ERR The ID specified in XADD is equal or smaller than the target stream top item");
             }
             else {
               completeID(tokens);
 
               for(int i=3 ;i<tokens.size() ;i+=2) {
-                STREAM[tokens[1]].DATA[lastSTREAMID.first][lastSTREAMID.second][tokens[i]] = tokens[i+1]; 
+                STREAM[tokens[1]].DATA[STREAM[tokens[1]].lastSTREAMID.first][STREAM[tokens[1]].lastSTREAMID.second][tokens[i]] = tokens[i+1]; 
               }
 
               response = encodeRESP(vector<string> {"GARBAGE" , tokens[2]});
@@ -794,6 +798,10 @@ void eventLoop() {
               auto timeoutDuration = chrono::milliseconds(static_cast<long long>(stod(tokens[2])));
               auto timeoutPoint = chrono::steady_clock::now() + timeoutDuration;
               
+              if(tokens[5] == "$") {
+                tokens[5] = to_string(STREAM[tokens[4]].lastSTREAMID.first)+"-"+to_string(STREAM[tokens[4]].lastSTREAMID.second+1);
+              }
+
               auto [idFound,cnt] = checkIDExists(tokens[4],tokens[5]);
               if(!idFound.empty()) {
                 string res = "*"+to_string(1)+"\r\n";
@@ -871,8 +879,6 @@ int main(int argc, char **argv) {
     cerr << "listen failed\n";
     return 1;
   }
-
-  lastSTREAMID = {0,0};
   
   eventLoop();
   close(serverFD);
