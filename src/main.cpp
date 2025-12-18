@@ -132,10 +132,12 @@ struct StreamList{
     if(!idFound.empty()) {
       string res = "*"+to_string(1)+"\r\n";
       res += "*2\r\n$"+to_string(str.size())+"\r\n"+str+"\r\n";
+      res += "*"+to_string(cnt)+"\r\n"; 
       
       for(const auto& ms : idFound) {
         for(const auto& seq : ms.second) {
-          res += "*2\r\n$"+to_string(to_string(ms.first).size() + 1 + to_string(seq.first).size())
+          res += "*2\r\n";
+          res += "$"+to_string(to_string(ms.first).size() + 1 + to_string(seq.first).size())
           +"\r\n"+to_string(ms.first) + "-" + to_string(seq.first)+"\r\n";
           res += "*"+to_string(seq.second.size()*2)+"\r\n";
           
@@ -794,10 +796,12 @@ void eventLoop() {
               if(!idFound.empty()) {
                 string res = "*"+to_string(1)+"\r\n";
                 res += "*2\r\n$"+to_string(tokens[4].size())+"\r\n"+tokens[4]+"\r\n";
+                res += "*"+to_string(cnt)+"\r\n";  
                 
                 for(const auto& ms : idFound) {
                   for(const auto& seq : ms.second) {
-                    res += "*2\r\n$"+to_string(to_string(ms.first).size() + 1 + to_string(seq.first).size())
+                    res += "*2\r\n";
+                    res += "$"+to_string(to_string(ms.first).size() + 1 + to_string(seq.first).size())
                     +"\r\n"+to_string(ms.first) + "-" + to_string(seq.first)+"\r\n";
                     res += "*"+to_string(seq.second.size()*2)+"\r\n";
                     
