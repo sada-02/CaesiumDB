@@ -162,9 +162,20 @@ struct StreamList{
   }
 };
 
+struct InfoServer{
+  bool isMaster;
+  string replicationID;
+  string replicationOffset;
+
+  InfoServer() {
+    isMaster = true;
+  }
+};
+
 map<string,metaData> DATA;
 map<string,List> LISTS;
 map<string,StreamList> STREAM;
+InfoServer info;
 
 vector<string> RESPparser(const char* str) {
   int n = strlen(str);
@@ -789,6 +800,10 @@ string handleINFO(bool isREP=true) {
   string response = "";
   if(isREP) {
     response+="$" + string(isMaster ? "11" : "10") + "\r\nrole:" + string(isMaster ? "master" : "slave") + "\r\n";
+    response+="$" + string(info.replicationID.size()+string("master_replid").size()) + 
+    "\r\nmaster_replid:" + info.replicationID + "\r\n";
+    response+="$" + string(info.replicationOffset.size()+string("master_repl_offset").size()) + 
+    "\r\nmaster_repl_offset:" + info.replicationOffset + "\r\n";
   }
 
   return response;
@@ -980,10 +995,12 @@ int main(int argc, char **argv) {
       PORT = stoi(argv[i+1]);
     }
     else if(string(argv[i]) == "--replicaof") {
-      isMaster = false;
+      info.isMaster = false;
     }
   }
   server_addr.sin_port = htons(PORT);
+  info.replicationID = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
+  info.replicationOffset = "0";
   
   if (bind(serverFD, (struct sockaddr *) &server_addr, sizeof(server_addr)) != 0) {
     cerr << "Failed to bind to port " << PORT << "\n";
