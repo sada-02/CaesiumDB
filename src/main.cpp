@@ -106,6 +106,7 @@ struct StreamList{
 
   StreamList() {
     lastSTREAMID = {0,0};
+    blocks = nullptr;
   }
 
   void insert(int cFD , chrono::steady_clock::time_point t , bool flag = false , string id = "") {
