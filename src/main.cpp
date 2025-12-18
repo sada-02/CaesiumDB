@@ -800,7 +800,7 @@ void eventLoop() {
               auto timeoutPoint = chrono::steady_clock::now() + timeoutDuration;
               
               if(tokens[5] == "$") {
-                tokens[5] = to_string(STREAM[tokens[4]].lastSTREAMID.first)+"-"+to_string(STREAM[tokens[4]].lastSTREAMID.second+1);
+                tokens[5] = to_string(STREAM[tokens[4]].lastSTREAMID.first)+"-"+to_string(STREAM[tokens[4]].lastSTREAMID.second);
               }
 
               auto [idFound,cnt] = checkIDExists(tokens[4],tokens[5]);
