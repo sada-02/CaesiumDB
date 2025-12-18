@@ -149,6 +149,8 @@ struct StreamList{
       }
 
       send(temp->clientFD,res.c_str(),res.size(),0);
+      blocks = temp->next;
+      delete temp;
     }
   }
 };
