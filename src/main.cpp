@@ -799,11 +799,12 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
 string handleINFO(bool isREP=true) {
   string response = "";
   if(isREP) {
-    response+="$" + string(info.isMaster ? "11" : "10") + "\r\nrole:" + string(info.isMaster ? "master" : "slave") + "\r\n";
-    response+="$" + to_string(info.replicationID.size()+string("master_replid").size()) + 
-    "\r\nmaster_replid:" + info.replicationID + "\r\n";
-    response+="$" + to_string(info.replicationOffset.size()+string("master_repl_offset").size()) + 
-    "\r\nmaster_repl_offset:" + info.replicationOffset + "\r\n";
+    string content = "";
+    content += "role:" + string(info.isMaster ? "master" : "slave") + "\r\n";
+    content += "master_replid:" + info.replicationID + "\r\n";
+    content += "master_repl_offset:" + info.replicationOffset;
+    
+    response = "$" + to_string(content.size()) + "\r\n" + content + "\r\n";
   }
 
   return response;
