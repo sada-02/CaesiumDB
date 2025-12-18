@@ -788,8 +788,9 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
 string handleINFO(bool isREP=true) {
   string response = "";
   if(isREP) {
-    string role = "role:" + string(isMaster ? "master" : "slave");
-    response += "$" + to_string(role.size()) + "\r\n" + role + "\r\n";
+    string role = isMaster ? "master" : "slave";
+    string content = "role:" + role;
+    response += "$" + to_string(content.size()) + "\r\n" + content + "\r\n";
   }
 
   return response;
