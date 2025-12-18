@@ -234,7 +234,7 @@ string encodeRESPsimpleERR(const string& str) {
 }
 
 string decodeRESPsimple(const char* str) {
-  return string(str).substr(1,str.size()-3);
+  return string(str).substr(1,string(str).size()-3);
 }
 
 void upperCase(string& str) {
