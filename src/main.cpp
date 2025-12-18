@@ -943,9 +943,7 @@ void eventLoop() {
             pos++;
           }
         }
-      } 
-      else if(bytesRead == 0) {
-    
+      } else if(bytesRead == 0) {
         close(masterFD);
         masterFD = -1;
       }
