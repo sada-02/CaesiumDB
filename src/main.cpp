@@ -363,14 +363,14 @@ void completeID(vector<string>& tokens) {
     long long ms = std::chrono::duration_cast<std::chrono::milliseconds>(
       std::chrono::system_clock::now().time_since_epoch()
     ).count();
-    if(ms == STREAM[tokens[0]].lastSTREAMID.first) {
-      STREAM[tokens[0]].lastSTREAMID.second++;
+    if(ms == STREAM[tokens[1]].lastSTREAMID.first) {
+      STREAM[tokens[1]].lastSTREAMID.second++;
     }
     else {
-      STREAM[tokens[0]].lastSTREAMID.first = ms;
-      STREAM[tokens[0]].lastSTREAMID.second = 0;
+      STREAM[tokens[1]].lastSTREAMID.first = ms;
+      STREAM[tokens[1]].lastSTREAMID.second = 0;
     }
-    tokens[2] = to_string(STREAM[tokens[0]].lastSTREAMID.first)+"-"+to_string(STREAM[tokens[0]].lastSTREAMID.second);
+    tokens[2] = to_string(STREAM[tokens[1]].lastSTREAMID.first)+"-"+to_string(STREAM[tokens[1]].lastSTREAMID.second);
   }
   else {
     vector<string> seqNum;
@@ -379,15 +379,15 @@ void completeID(vector<string>& tokens) {
     while(getline(ID,str,'-')) seqNum.push_back(str);
     
     if(seqNum[1] == "*") {
-      if(STREAM[tokens[0]].lastSTREAMID.first == stoll(seqNum[0])) {
-        STREAM[tokens[0]].lastSTREAMID.second = STREAM[tokens[0]].lastSTREAMID.second+1;
+      if(STREAM[tokens[1]].lastSTREAMID.first == stoll(seqNum[0])) {
+        STREAM[tokens[1]].lastSTREAMID.second = STREAM[tokens[1]].lastSTREAMID.second+1;
       }
       else {
-        STREAM[tokens[0]].lastSTREAMID.first = stoll(seqNum[0]);
-        STREAM[tokens[0]].lastSTREAMID.second = 0;
+        STREAM[tokens[1]].lastSTREAMID.first = stoll(seqNum[0]);
+        STREAM[tokens[1]].lastSTREAMID.second = 0;
       }
 
-      tokens[2] = to_string(STREAM[tokens[0]].lastSTREAMID.first)+"-"+to_string(STREAM[tokens[0]].lastSTREAMID.second);
+      tokens[2] = to_string(STREAM[tokens[1]].lastSTREAMID.first)+"-"+to_string(STREAM[tokens[1]].lastSTREAMID.second);
     }
   }
 }
