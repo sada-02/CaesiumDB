@@ -887,8 +887,8 @@ void eventLoop() {
         if(tokens[0] == "INFO") {
           isINFO = true;
           if(tokens.size() > 1) {
-            upperCase(tokens[2]);
-            if(tokens[2] == "REPLICATION") {
+            upperCase(tokens[1]);
+            if(tokens[1] == "REPLICATION") {
               isREP = true;
             }
           }
