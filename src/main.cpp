@@ -845,7 +845,9 @@ void eventLoop() {
                 DATA[tokens[1]].DATA = to_string(val+1);
                 response = encodeRESPint(val+1);
               }
-              catch(...) {}
+              catch(...) {
+                response = encodeRESPsimpleERR("ERR value is not an integer or out of range");
+              }
             }
           }
 
