@@ -43,11 +43,13 @@ struct blocklist{
   chrono::steady_clock::time_point timeout;
   bool indef;
   blocklist* next;
+  string ID ;
 
-  blocklist(int id , chrono::steady_clock::time_point t , bool flag = false) {
+  blocklist(int id , chrono::steady_clock::time_point t , bool flag = false , string str = "") {
     clientFD = id;
     timeout = t;
     indef = flag;
+    ID = str;
   }
 };
 
@@ -97,9 +99,60 @@ struct List{
   }
 };
 
+struct StreamList{
+  map<long,long,map<long long,map<string,string>>> DATA;
+  blocklist* blocks;
+
+  void insert(int cFD , chrono::steady_clock::time_point t , bool flag = false , string id = "") {
+    if(!blocks) {
+      blocks = new blocklist(cFD , t , flag , id);
+    }
+    else {
+      blocklist* temp = blocks;
+      while(temp->next) temp = temp->next;
+      temp->next = new blocklist(cFD , t , flag , id);
+    }
+  }
+
+  void handleREQ(const string& str) {
+    if(!blocks) return ;
+
+    blocklist* temp = blocks;
+    string response = "*-1\r\n";
+    while(temp && !temp->indef && chrono::steady_clock::now() > temp->timeout) {
+      send(temp->clientFD,response.c_str(),response.size(),0);
+      blocklist* prev = temp;
+      temp = temp->next;
+      delete prev;
+    }
+    if(!temp) return;
+
+    auto [idFound,cnt] = checkIDExists(str,temp->ID);
+    if(!idFound.empty()) {
+      string res = "*"+to_string(1)+"\r\n";
+      res += "*2\r\n$"+to_string(str.size())+"\r\n"+str+"\r\n";
+      
+      for(const auto& ms : idFound) {
+        for(const auto& seq : ms.second) {
+          res += "*2\r\n$"+to_string(to_string(ms.first).size() + 1 + to_string(seq.first).size())
+          +"\r\n"+to_string(ms.first) + "-" + to_string(seq.first)+"\r\n";
+          res += "*"+to_string(seq.second.size()*2)+"\r\n";
+          
+          for(const auto& kv : seq.second) {
+            res += "$"+to_string(kv.first.size())+"\r\n"+kv.first+"\r\n";
+            res += "$"+to_string(kv.second.size())+"\r\n"+kv.second+"\r\n";
+          }
+        }
+      }
+
+      send(temp->clientFD,res.c_str(),res.size(),0);
+    }
+  }
+};
+
 map<string,metaData> DATA;
 map<string,List> LISTS;
-map<string,map<long long,map<long long,map<string,string>>>> STREAM;
+map<string,StreamList> STREAM;
 
 vector<string> RESPparser(const char* str) {
   int n = strlen(str);
@@ -266,6 +319,34 @@ void checkBlockedTimeouts() {
       }
     }
   }
+
+  for(auto& s : STREAM) {
+    if(!s.second.blocks) continue;
+    
+    blocklist* temp = s.second.blocks;
+    blocklist* prev = nullptr;
+    
+    while(temp) {
+      if(!temp->indef && now > temp->timeout) {
+        send(temp->clientFD, response.c_str(), response.size(), 0);
+        
+        if(prev) {
+          prev->next = temp->next;
+          delete temp;
+          temp = prev->next;
+        } 
+        else {
+          s.second.blocks = temp->next;
+          delete temp;
+          temp = s.second.blocks;
+        }
+      } 
+      else {
+        prev = temp;
+        temp = temp->next;
+      }
+    }
+  }
 }
 
 void completeID(vector<string>& tokens) {
@@ -356,7 +437,7 @@ string handleXRANGE(vector<string>& tokens) {
   string result = "";
   int Count = 0;
   
-  for(auto& m : STREAM[tokens[1]]) {
+  for(auto& m : STREAM[tokens[1]].DATA) {
     long long ms = m.first;
     
     if(ms < startMS) continue;
@@ -410,12 +491,12 @@ string handleXREAD(vector<pair<string,string>> keywords) {
     while(getline(ID,str,'-')) seqNum.push_back(stoll(str));
     
     int cnt = 0 , tcnt = 0;
-    for(const auto& ms : STREAM[keywords[i].first]) {
+    for(const auto& ms : STREAM[keywords[i].first].DATA) {
       tcnt += ms.second.size();
     }
 
     bool found = false;
-    for(const auto& ms : STREAM[keywords[i].first]) {
+    for(const auto& ms : STREAM[keywords[i].first].DATA) {
       if(ms.first < seqNum[0]) {
         cnt += ms.second.size();      
       }
@@ -446,6 +527,31 @@ string handleXREAD(vector<pair<string,string>> keywords) {
 
   return res;
 } 
+
+pair<map<long long,map<long,long,map<string,string>>>,int> checkIDExists(const string& key , string& id) {
+  stringstream ID(id);
+  string str;
+  vector<long long> seqNum;
+  while(getline(ID,str,'-')) seqNum.push_back(stoll(str));
+  map<long long,map<long,long,map<string,string>>> res;
+  int cnt = 0;
+
+  for(const auto& ms : STREAM[key].DATA) {
+    if(ms.first < seqNum[0]) {
+      continue;
+    }
+    else {
+      for(const auto& seq : ms.second) {
+        if(seq.first <= seqNum[1] && ms.first == seqNum[0]) continue;
+        
+        res[seqNum[0]][seqNum[1]] = seq.second;
+        cnt++;
+      }
+    }
+  }
+
+  return {res,cnt};
+}
 
 string handleTYPE(const vector<string>& tokens) {
   if(DATA.find(tokens[1]) != DATA.end()) {
@@ -636,8 +742,7 @@ void eventLoop() {
                 LISTS[tokens[1]].blocks = nullptr;
               }
               auto timeoutDuration = chrono::milliseconds(static_cast<long long>(stod(tokens[2]) * 1000));
-              LISTS[tokens[1]].insert(currFD, chrono::steady_clock::now() + 
-              timeoutDuration, tokens[2]=="0");
+              LISTS[tokens[1]].insert(currFD, chrono::steady_clock::now() + timeoutDuration, tokens[2]=="0");
               sendResponse = false;
             }
             else {
@@ -659,9 +764,11 @@ void eventLoop() {
               completeID(tokens);
 
               for(int i=3 ;i<tokens.size() ;i+=2) {
-                STREAM[tokens[1]][lastSTREAMID.first][lastSTREAMID.second][tokens[i]] = tokens[i+1]; 
+                STREAM[tokens[1]].DATA[lastSTREAMID.first][lastSTREAMID.second][tokens[i]] = tokens[i+1]; 
               }
+
               response = encodeRESP(vector<string> {"GARBAGE" , tokens[2]});
+              STREAM[tokens[1]].handleREQ(tokens[1]);
             }
           }
           else if(tokens[0] == "XRANGE") {
@@ -677,6 +784,34 @@ void eventLoop() {
               }
 
               response = handleXREAD(keyID);
+            }
+            else if(tokens[1] == "BLOCK") {
+              auto timeoutDuration = chrono::milliseconds(static_cast<long long>(stod(tokens[2])));
+              
+              auto [idFound,cnt] = checkIDExists(tokens[4],tokens[5]);
+              if(!idFound.empty()) {
+                string res = "*"+to_string(1)+"\r\n";
+                res += "*2\r\n$"+to_string(tokens[4].size())+"\r\n"+tokens[4]+"\r\n";
+                
+                for(const auto& ms : idFound) {
+                  for(const auto& seq : ms.second) {
+                    res += "*2\r\n$"+to_string(to_string(ms.first).size() + 1 + to_string(seq.first).size())
+                    +"\r\n"+to_string(ms.first) + "-" + to_string(seq.first)+"\r\n";
+                    res += "*"+to_string(seq.second.size()*2)+"\r\n";
+                    
+                    for(const auto& kv : seq.second) {
+                      res += "$"+to_string(kv.first.size())+"\r\n"+kv.first+"\r\n";
+                      res += "$"+to_string(kv.second.size())+"\r\n"+kv.second+"\r\n";
+                    }
+                  }
+                }
+
+                response = res;
+              }
+              else {
+                STREAM[tokens[4]].insert(currFD,timeoutDuration,false,tokens[5]);
+                sendResponse = false;
+              }
             }
           }
           else if(tokens[0] == "TYPE") {
