@@ -1018,6 +1018,7 @@ void eventLoop() {
             close(currFD);
             clients.erase(clients.begin() + i);
             clientINFO.erase(currFD);
+            replicas.erase(currFD);
             sendResponse = false;
           }
         }
