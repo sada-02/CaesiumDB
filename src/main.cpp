@@ -776,6 +776,9 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
       onQueue[currFD] = {};
       response = encodeRESPsimpleSTR("OK");
     }
+    else {
+      response = encodeRESPsimpleERR("ERR MULTI calls can not be nested");
+    }
   }
 
   return response;
@@ -869,12 +872,16 @@ void eventLoop() {
           }
           else {
             vector<string> execRes;
-            for(int i=0 ;i<onQueue.size() ;i++) {
-              tokens = onQueue[i];
-              string res = generateResponse(tokens,sendResponse,currFD);
+            for(int i=0 ;i<onQueue[currFD].size() ;i++) {
+              vector<string> cmdTokens = onQueue[currFD][i];
+              string res = generateResponse(cmdTokens,sendResponse,currFD);
               if(sendResponse) execRes.push_back(res);
             }
             response = "*"+to_string(execRes.size())+"\r\n";
+            for(const auto& r : execRes) {
+              response += r;
+            }
+            onQueue.erase(currFD);
           }
 
           send(currFD, response.c_str() , response.size() , 0);
