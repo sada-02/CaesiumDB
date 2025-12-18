@@ -1052,12 +1052,37 @@ int main(int argc, char **argv) {
       return 1;
     }
     
+    char buffer[1024];
+    int bytesRead;
+    vector<string> tokens;
+
     string handshake = "*1\r\n$4\r\nPING\r\n";
     send(masterFD, handshake.c_str(), handshake.size(), 0);
-    handshake = "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$" + to_string(to_string(masterPort).size())
-    + "\r\n"+ to_string(masterPort) +"\r\n";
-    send(masterFD, handshake.c_str(), handshake.size(), 0);
-    handshake = "*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n";
+
+    bytesRead = recv(masterFD , buffer , sizeof(buffer) , 0);
+    if(bytesRead > 0) {
+      buffer[bytesRead] = '\0';
+    }
+    tokens = RESPparser(buffer);
+    upperCase(tokens[0]);
+
+    if(tokens[0] == "PONG") {
+      handshake = "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$" + to_string(to_string(masterPort).size())
+      + "\r\n"+ to_string(masterPort) +"\r\n";  
+      send(masterFD, handshake.c_str(), handshake.size(), 0); 
+    }
+    
+    bytesRead = recv(masterFD , buffer , sizeof(buffer) , 0);
+    if(bytesRead > 0) {
+      buffer[bytesRead] = '\0';
+    }
+    tokens = RESPparser(buffer);
+    upperCase(tokens[0]);
+
+    if(tokens[0] == "OK") {
+      handshake = "*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n";
+      send(masterFD, handshake.c_str(), handshake.size(), 0);
+    }
   }
   
   eventLoop();
