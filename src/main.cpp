@@ -784,6 +784,15 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
   return response;
 }
 
+string handleINFO(bool isREP=true) {
+  string response = "";
+  if(isREP) {
+    response+="$11\r\nrole:master\r\n";
+  }
+
+  return response;
+}
+
 void eventLoop() {
   while(true) {
     fd_set readFDs;
@@ -858,7 +867,32 @@ void eventLoop() {
         }
         vector<string> tokens = RESPparser(buffer);
         string response = "";
+        
+        bool isINFO = false , isREP = false;
+        if(tokens[0] == "-p") {
+          upperCase(tokens[2]);
+          if(tokens[2] == "INFO") {
+            isINFO = true;
+            if(tokens.size() > 3) {
+              upperCase(tokens[3]);
+              if(tokens[3] == "REPLICATION") {
+                isREP = true;
+              }
+            }
+          }
+        }
+
         upperCase(tokens[0]);
+
+        if(tokens[0] == "INFO") {
+          isINFO = true;
+          if(tokens.size() > 1) {
+            upperCase(tokens[2]);
+            if(tokens[2] == "REPLICATION") {
+              isREP = true;
+            }
+          }
+        }
 
         cout << "Tokens[" << tokens.size() << "]: ";
         for(const auto& t : tokens) {
@@ -866,7 +900,11 @@ void eventLoop() {
         }
         cout << endl;
 
-        if(tokens[0] == "DISCARD") {
+        if(isINFO) {
+         response = handleINFO(isREP);
+          send(currFD,response.c_str(),response.size(),0);
+        }
+        else if(tokens[0] == "DISCARD") {
           if(onQueue.find(currFD) == onQueue.end()) {
             response = encodeRESPsimpleERR("ERR DISCARD without MULTI");
           }
