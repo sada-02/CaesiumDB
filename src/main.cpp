@@ -904,31 +904,31 @@ void eventLoop() {
         int pos = 0;
         while(pos < bytesRead) {
           if(buffer[pos] == '*') {
-            int cmdStart = pos;
-            int cmdEnd = pos;
+            int startp = pos;
+            int endp = pos;
             
-            int arrayCount = 0;
-            cmdEnd++;
-            while(cmdEnd < bytesRead && buffer[cmdEnd] >= '0' && buffer[cmdEnd] <= '9') {
-              arrayCount = arrayCount * 10 + (buffer[cmdEnd] - '0');
-              cmdEnd++;
+            int cnt = 0;
+            endp++;
+            while(endp < bytesRead && buffer[endp] >= '0' && buffer[endp] <= '9') {
+              cnt = cnt * 10 + (buffer[endp] - '0');
+              endp++;
             }
-            cmdEnd += 2; 
+            endp += 2; 
             
-            for(int i = 0; i < arrayCount && cmdEnd < bytesRead; i++) {
-              if(buffer[cmdEnd] == '$') {
-                cmdEnd++;
+            for(int i = 0; i < cnt && endp < bytesRead; i++) {
+              if(buffer[endp] == '$') {
+                endp++;
                 int len = 0;
-                while(cmdEnd < bytesRead && buffer[cmdEnd] >= '0' && buffer[cmdEnd] <= '9') {
-                  len = len * 10 + (buffer[cmdEnd] - '0');
-                  cmdEnd++;
+                while(endp < bytesRead && buffer[endp] >= '0' && buffer[endp] <= '9') {
+                  len = len * 10 + (buffer[endp] - '0');
+                  endp++;
                 }
-                cmdEnd += 2; 
-                cmdEnd += len + 2;
+                endp += 2; 
+                endp += len + 2;
               }
             }
             
-            string cmdStr(buffer + cmdStart, cmdEnd - cmdStart);
+            string cmdStr(buffer + startp, endp - startp);
             vector<string> tokens = RESPparser(cmdStr.c_str());
             
             if(!tokens.empty()) {              
@@ -938,12 +938,14 @@ void eventLoop() {
               generateResponse(tokens, sendResponse, masterFD);
             }
             
-            pos = cmdEnd;
-          } else {
+            pos = endp;
+          } 
+          else {
             pos++;
           }
         }
-      } else if(bytesRead == 0) {
+      } 
+      else if(bytesRead == 0) {
         close(masterFD);
         masterFD = -1;
       }
