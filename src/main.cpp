@@ -17,6 +17,7 @@
 using namespace std;
 
 int serverFD;
+int masterFD = -1; 
 vector<int> clients;
 set<int> replicas; 
 map<int,struct sockaddr_in> clientINFO;
@@ -842,6 +843,11 @@ void eventLoop() {
     FD_SET(serverFD,&readFDs);
     int maxFD = serverFD;
 
+    if(masterFD >= 0) {
+      FD_SET(masterFD, &readFDs);
+      maxFD = max(maxFD, masterFD);
+    }
+
     for(int id : clients) {
       FD_SET(id,&readFDs);
       maxFD = max(id,maxFD);
@@ -887,6 +893,63 @@ void eventLoop() {
     select(maxFD + 1 , &readFDs , NULL , NULL , &timeout);
     
     checkBlockedTimeouts();
+
+    if(masterFD >= 0 && FD_ISSET(masterFD, &readFDs)) {
+      char buffer[4096];
+      int bytesRead = recv(masterFD, buffer, sizeof(buffer), 0);
+      
+      if(bytesRead > 0) {
+        buffer[bytesRead] = '\0';
+        
+        int pos = 0;
+        while(pos < bytesRead) {
+          if(buffer[pos] == '*') {
+            int cmdStart = pos;
+            int cmdEnd = pos;
+            
+            int arrayCount = 0;
+            cmdEnd++;
+            while(cmdEnd < bytesRead && buffer[cmdEnd] >= '0' && buffer[cmdEnd] <= '9') {
+              arrayCount = arrayCount * 10 + (buffer[cmdEnd] - '0');
+              cmdEnd++;
+            }
+            cmdEnd += 2; 
+            
+            for(int i = 0; i < arrayCount && cmdEnd < bytesRead; i++) {
+              if(buffer[cmdEnd] == '$') {
+                cmdEnd++;
+                int len = 0;
+                while(cmdEnd < bytesRead && buffer[cmdEnd] >= '0' && buffer[cmdEnd] <= '9') {
+                  len = len * 10 + (buffer[cmdEnd] - '0');
+                  cmdEnd++;
+                }
+                cmdEnd += 2; 
+                cmdEnd += len + 2;
+              }
+            }
+            
+            string cmdStr(buffer + cmdStart, cmdEnd - cmdStart);
+            vector<string> tokens = RESPparser(cmdStr.c_str());
+            
+            if(!tokens.empty()) {
+              upperCase(tokens[0]);
+              
+              bool sendResponse = false;
+              generateResponse(tokens, sendResponse, masterFD);
+            }
+            
+            pos = cmdEnd;
+          } else {
+            pos++;
+          }
+        }
+      } 
+      else if(bytesRead == 0) {
+    
+        close(masterFD);
+        masterFD = -1;
+      }
+    }
 
     if(FD_ISSET(serverFD,&readFDs)) {
       struct sockaddr_in client_addr;
@@ -1008,7 +1071,7 @@ void eventLoop() {
             close(currFD);
             clients.erase(clients.begin() + i);
             clientINFO.erase(currFD);
-            replicas.erase(currFD);  // Remove from replicas if it was one
+            replicas.erase(currFD);  
             sendResponse = false;
           }
         }
@@ -1075,7 +1138,7 @@ int main(int argc, char **argv) {
   }
   
   if(!info.isMaster && !masterHost.empty()) {
-    int masterFD = socket(AF_INET, SOCK_STREAM, 0);
+    masterFD = socket(AF_INET, SOCK_STREAM, 0);
     if(masterFD < 0) {
       cerr << "Failed to create master socket\n";
       return 1;
@@ -1141,6 +1204,14 @@ int main(int argc, char **argv) {
     if(response == "OK") {
       handshake = "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n";
       send(masterFD, handshake.c_str(), handshake.size(), 0);
+      
+      bytesRead = recv(masterFD, buffer, sizeof(buffer), 0);
+      if(bytesRead > 0) {
+        buffer[bytesRead] = '\0';
+      }
+      
+      bytesRead = recv(masterFD, buffer, sizeof(buffer), 0);
+      if(bytesRead > 0) {}
     }
   }
   
