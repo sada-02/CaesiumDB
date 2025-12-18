@@ -815,7 +815,7 @@ void eventLoop() {
                 response = res;
               }
               else {
-                STREAM[tokens[4]].insert(currFD,timeoutPoint,false,tokens[5]);
+                STREAM[tokens[4]].insert(currFD,timeoutPoint,tokens[2] == "0",tokens[5]);
                 sendResponse = false;
               }
             }
