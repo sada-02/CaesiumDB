@@ -777,6 +777,8 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
       response = encodeRESPsimpleSTR("OK");
     }
   }
+
+  return response;
 }
 
 void eventLoop() {
@@ -884,9 +886,9 @@ void eventLoop() {
         }
         else {
           if(bytesRead > 0) {
-            generateResponse(tokens,sendResponse,currFD);
+            response = generateResponse(tokens,sendResponse,currFD);
 
-          if(sendResponse) send(currFD, response.c_str() , response.size() , 0);
+            if(sendResponse) send(currFD, response.c_str() , response.size() , 0);
           } 
           else {
             close(currFD);
