@@ -564,7 +564,7 @@ pair<map<long long, map<long, map<string,string>>>, int> checkIDExists(const str
   return {res,cnt};
 }
 
-string handleTYPE(const vector<string>& tokens , bool& sendResponse) {
+string handleTYPE(const vector<string>& tokens) {
   if(DATA.find(tokens[1]) != DATA.end()) {
     return encodeRESPsimpleSTR("string");
   }
@@ -576,7 +576,7 @@ string handleTYPE(const vector<string>& tokens , bool& sendResponse) {
   }
 }
 
-string generateResponse(vector<string>& tokens) {
+string generateResponse(vector<string>& tokens , bool& sendResponse) {
   string response = "";
 
   if(tokens[0] == "PING") {
