@@ -19,6 +19,7 @@ using namespace std;
 int serverFD;
 vector<int> clients;
 map<int,struct sockaddr_in> clientINFO;
+map<int,vector<string>> onQueue;
 
 string encodeRESP(const vector<string>& str , bool isArr = false);
 pair<map<long long, map<long, map<string,string>>>, int> checkIDExists(const string& key, string& id);
@@ -657,208 +658,220 @@ void eventLoop() {
         }
         cout << endl;
 
-        if(bytesRead > 0) {
-          if(tokens[0] == "PING") {
-            response = "+PONG\r\n";
-          }
-          else if(tokens[0] == "ECHO") {
-            response = encodeRESP(tokens);
-          }
-          else if(tokens[0] == "SET") {
-            response = "+OK\r\n";
-            handleSET(tokens);
-          }
-          else if(tokens[0] == "GET") {
-            handleGET(tokens[1]);
-            if(DATA.find(tokens[1]) == DATA.end()) {
-              response = "$-1\r\n";
+        if(onQueue.find(currFD)) {
+          onQueue[currFD].push_back(tokens);
+          response = encodeRESPsimpleSTR("QUEUED");
+          send(currFD, response.c_str() , response.size() , 0)
+        }
+        else {
+          if(bytesRead > 0) {
+            if(tokens[0] == "PING") {
+              response = "+PONG\r\n";
             }
-            else {
-              response = encodeRESP(vector<string> {"GARBAGE" , DATA[tokens[1]].DATA});
+            else if(tokens[0] == "ECHO") {
+              response = encodeRESP(tokens);
             }
-          }
-          else if(tokens[0] == "RPUSH" || tokens[0] == "LPUSH") {
-            int lsize = handlePUSH(tokens , tokens[0][0] == 'R');
-            if(lsize>0) {
-              response = encodeRESPint(lsize);
+            else if(tokens[0] == "SET") {
+              response = "+OK\r\n";
+              handleSET(tokens);
             }
-          }
-          else if(tokens[0] == "LRANGE") {
-            int startIDX = stoi(tokens[2]) , endIDX = stoi(tokens[3]);
-            if(LISTS.find(tokens[1]) == LISTS.end()) {
-              response = "*0\r\n";
+            else if(tokens[0] == "GET") {
+              handleGET(tokens[1]);
+              if(DATA.find(tokens[1]) == DATA.end()) {
+                response = "$-1\r\n";
+              }
+              else {
+                response = encodeRESP(vector<string> {"GARBAGE" , DATA[tokens[1]].DATA});
+              }
             }
-            else {
-              if(startIDX<0) {
-                startIDX = LISTS[tokens[1]].size + startIDX;
+            else if(tokens[0] == "RPUSH" || tokens[0] == "LPUSH") {
+              int lsize = handlePUSH(tokens , tokens[0][0] == 'R');
+              if(lsize>0) {
+                response = encodeRESPint(lsize);
               }
-              if(startIDX<0) {
-                startIDX = 0;
-              }
-
-              if(endIDX<0) {
-                endIDX = LISTS[tokens[1]].size + endIDX;
-              }
-              if(endIDX<0) {
-                endIDX = 0;
-              }
-
-              if(LISTS[tokens[1]].size < startIDX || startIDX > endIDX) {
+            }
+            else if(tokens[0] == "LRANGE") {
+              int startIDX = stoi(tokens[2]) , endIDX = stoi(tokens[3]);
+              if(LISTS.find(tokens[1]) == LISTS.end()) {
                 response = "*0\r\n";
               }
               else {
-                vector<string> keys;
-                keys.push_back("GARBAGE");
-                int i=0;
-                ListNode* temp = LISTS[tokens[1]].root;
-                while(i<startIDX) {
-                  i++;
-                  temp = temp->next;
+                if(startIDX<0) {
+                  startIDX = LISTS[tokens[1]].size + startIDX;
                 }
-                endIDX = min(endIDX , LISTS[tokens[1]].size-1);
-
-                while(temp && i<=endIDX) {
-                  i++;
-                  keys.push_back(temp->key);
-                  temp = temp->next;
+                if(startIDX<0) {
+                  startIDX = 0;
                 }
 
-                response = encodeRESP(keys , true);
-              }
-            }
-          }
-          else if(tokens[0] == "LLEN") {
-            int lsize = 0;
-            if(LISTS.find(tokens[1]) != LISTS.end()) lsize = LISTS[tokens[1]].size;
-            response = encodeRESPint(lsize);
-          }
-          else if(tokens[0] == "LPOP") {
-            int numEle = 1;
-            if(tokens.size() > 2) numEle = stoi(tokens[2]);
+                if(endIDX<0) {
+                  endIDX = LISTS[tokens[1]].size + endIDX;
+                }
+                if(endIDX<0) {
+                  endIDX = 0;
+                }
 
-            vector<string> element = handlePOP(tokens[1],numEle);
-            if(element.size() == 0) {
-              response = "$-1\r\n";
-            }
-            else {
-              response = encodeRESP(element , tokens.size()>2);
-            }
-          }
-          else if(tokens[0] == "BLPOP") {
-            if(LISTS.find(tokens[1]) == LISTS.end() || LISTS[tokens[1]].size == 0) {
-              if(LISTS.find(tokens[1]) == LISTS.end()) {
-                LISTS[tokens[1]].root = nullptr;
-                LISTS[tokens[1]].size = 0;
-                LISTS[tokens[1]].blocks = nullptr;
-              }
-              auto timeoutDuration = chrono::milliseconds(static_cast<long long>(stod(tokens[2]) * 1000));
-              LISTS[tokens[1]].insert(currFD, chrono::steady_clock::now() + timeoutDuration, tokens[2]=="0");
-              sendResponse = false;
-            }
-            else {
-              ListNode* ele = LISTS[tokens[1]].root;
-              LISTS[tokens[1]].root = LISTS[tokens[1]].root->next;
-              LISTS[tokens[1]].size--;
-              response = encodeRESP(vector<string> {"GARBAGE" , tokens[1] , ele->key}, true);
-              delete ele;
-            }
-          }
-          else if(tokens[0] == "XADD") {
-            if(tokens[2] == "0-0") {
-              response = encodeRESPsimpleERR("ERR The ID specified in XADD must be greater than 0-0");
-            }
-            else if(!checkSTREAMID(tokens[2] , tokens[1])) {
-              response = encodeRESPsimpleERR("ERR The ID specified in XADD is equal or smaller than the target stream top item");
-            }
-            else {
-              completeID(tokens);
-
-              for(int i=3 ;i<tokens.size() ;i+=2) {
-                STREAM[tokens[1]].DATA[STREAM[tokens[1]].lastSTREAMID.first][STREAM[tokens[1]].lastSTREAMID.second][tokens[i]] = tokens[i+1]; 
-              }
-
-              response = encodeRESP(vector<string> {"GARBAGE" , tokens[2]});
-              STREAM[tokens[1]].handleREQ(tokens[1]);
-            }
-          }
-          else if(tokens[0] == "XRANGE") {
-            response = handleXRANGE(tokens);
-          }
-          else if(tokens[0] == "XREAD") {
-            upperCase(tokens[1]);
-            if(tokens[1] == "STREAMS") {
-              int numKeys = (tokens.size()-2)/2;
-              vector<pair<string,string>> keyID;
-              for(int i=0;i<numKeys;i++) {
-                keyID.push_back({tokens[2+i],tokens[2+i+numKeys]});
-              }
-
-              response = handleXREAD(keyID);
-            }
-            else if(tokens[1] == "BLOCK") {
-              auto timeoutDuration = chrono::milliseconds(static_cast<long long>(stod(tokens[2])));
-              auto timeoutPoint = chrono::steady_clock::now() + timeoutDuration;
-              
-              if(tokens[5] == "$") {
-                tokens[5] = to_string(STREAM[tokens[4]].lastSTREAMID.first)+"-"+to_string(STREAM[tokens[4]].lastSTREAMID.second);
-              }
-
-              auto [idFound,cnt] = checkIDExists(tokens[4],tokens[5]);
-              if(!idFound.empty()) {
-                string res = "*"+to_string(1)+"\r\n";
-                res += "*2\r\n$"+to_string(tokens[4].size())+"\r\n"+tokens[4]+"\r\n";
-                res += "*"+to_string(cnt)+"\r\n";  
-                
-                for(const auto& ms : idFound) {
-                  for(const auto& seq : ms.second) {
-                    res += "*2\r\n";
-                    res += "$"+to_string(to_string(ms.first).size() + 1 + to_string(seq.first).size())
-                    +"\r\n"+to_string(ms.first) + "-" + to_string(seq.first)+"\r\n";
-                    res += "*"+to_string(seq.second.size()*2)+"\r\n";
-                    
-                    for(const auto& kv : seq.second) {
-                      res += "$"+to_string(kv.first.size())+"\r\n"+kv.first+"\r\n";
-                      res += "$"+to_string(kv.second.size())+"\r\n"+kv.second+"\r\n";
-                    }
+                if(LISTS[tokens[1]].size < startIDX || startIDX > endIDX) {
+                  response = "*0\r\n";
+                }
+                else {
+                  vector<string> keys;
+                  keys.push_back("GARBAGE");
+                  int i=0;
+                  ListNode* temp = LISTS[tokens[1]].root;
+                  while(i<startIDX) {
+                    i++;
+                    temp = temp->next;
                   }
-                }
+                  endIDX = min(endIDX , LISTS[tokens[1]].size-1);
 
-                response = res;
+                  while(temp && i<=endIDX) {
+                    i++;
+                    keys.push_back(temp->key);
+                    temp = temp->next;
+                  }
+
+                  response = encodeRESP(keys , true);
+                }
+              }
+            }
+            else if(tokens[0] == "LLEN") {
+              int lsize = 0;
+              if(LISTS.find(tokens[1]) != LISTS.end()) lsize = LISTS[tokens[1]].size;
+              response = encodeRESPint(lsize);
+            }
+            else if(tokens[0] == "LPOP") {
+              int numEle = 1;
+              if(tokens.size() > 2) numEle = stoi(tokens[2]);
+
+              vector<string> element = handlePOP(tokens[1],numEle);
+              if(element.size() == 0) {
+                response = "$-1\r\n";
               }
               else {
-                STREAM[tokens[4]].insert(currFD,timeoutPoint,tokens[2] == "0",tokens[5]);
+                response = encodeRESP(element , tokens.size()>2);
+              }
+            }
+            else if(tokens[0] == "BLPOP") {
+              if(LISTS.find(tokens[1]) == LISTS.end() || LISTS[tokens[1]].size == 0) {
+                if(LISTS.find(tokens[1]) == LISTS.end()) {
+                  LISTS[tokens[1]].root = nullptr;
+                  LISTS[tokens[1]].size = 0;
+                  LISTS[tokens[1]].blocks = nullptr;
+                }
+                auto timeoutDuration = chrono::milliseconds(static_cast<long long>(stod(tokens[2]) * 1000));
+                LISTS[tokens[1]].insert(currFD, chrono::steady_clock::now() + timeoutDuration, tokens[2]=="0");
                 sendResponse = false;
               }
-            }
-          }
-          else if(tokens[0] == "TYPE") {
-            response = handleTYPE(tokens);
-          }
-          else if(tokens[0] == "INCR") {
-            if(DATA.find(tokens[1]) == DATA.end()) {
-              response = encodeRESPint(1);
-              DATA[tokens[1]].DATA = "1";
-            }
-            else {
-              try {
-                int val = stoi(DATA[tokens[1]].DATA);
-                DATA[tokens[1]].DATA = to_string(val+1);
-                response = encodeRESPint(val+1);
-              }
-              catch(...) {
-                response = encodeRESPsimpleERR("ERR value is not an integer or out of range");
+              else {
+                ListNode* ele = LISTS[tokens[1]].root;
+                LISTS[tokens[1]].root = LISTS[tokens[1]].root->next;
+                LISTS[tokens[1]].size--;
+                response = encodeRESP(vector<string> {"GARBAGE" , tokens[1] , ele->key}, true);
+                delete ele;
               }
             }
-          }
+            else if(tokens[0] == "XADD") {
+              if(tokens[2] == "0-0") {
+                response = encodeRESPsimpleERR("ERR The ID specified in XADD must be greater than 0-0");
+              }
+              else if(!checkSTREAMID(tokens[2] , tokens[1])) {
+                response = encodeRESPsimpleERR("ERR The ID specified in XADD is equal or smaller than the target stream top item");
+              }
+              else {
+                completeID(tokens);
 
-        if(sendResponse) send(currFD, response.c_str() , response.size() , 0);
-        } 
-        else {
-          close(currFD);
-          clients.erase(clients.begin() + i);
-          clientINFO.erase(currFD);
+                for(int i=3 ;i<tokens.size() ;i+=2) {
+                  STREAM[tokens[1]].DATA[STREAM[tokens[1]].lastSTREAMID.first][STREAM[tokens[1]].lastSTREAMID.second][tokens[i]] = tokens[i+1]; 
+                }
+
+                response = encodeRESP(vector<string> {"GARBAGE" , tokens[2]});
+                STREAM[tokens[1]].handleREQ(tokens[1]);
+              }
+            }
+            else if(tokens[0] == "XRANGE") {
+              response = handleXRANGE(tokens);
+            }
+            else if(tokens[0] == "XREAD") {
+              upperCase(tokens[1]);
+              if(tokens[1] == "STREAMS") {
+                int numKeys = (tokens.size()-2)/2;
+                vector<pair<string,string>> keyID;
+                for(int i=0;i<numKeys;i++) {
+                  keyID.push_back({tokens[2+i],tokens[2+i+numKeys]});
+                }
+
+                response = handleXREAD(keyID);
+              }
+              else if(tokens[1] == "BLOCK") {
+                auto timeoutDuration = chrono::milliseconds(static_cast<long long>(stod(tokens[2])));
+                auto timeoutPoint = chrono::steady_clock::now() + timeoutDuration;
+                
+                if(tokens[5] == "$") {
+                  tokens[5] = to_string(STREAM[tokens[4]].lastSTREAMID.first)+"-"+to_string(STREAM[tokens[4]].lastSTREAMID.second);
+                }
+
+                auto [idFound,cnt] = checkIDExists(tokens[4],tokens[5]);
+                if(!idFound.empty()) {
+                  string res = "*"+to_string(1)+"\r\n";
+                  res += "*2\r\n$"+to_string(tokens[4].size())+"\r\n"+tokens[4]+"\r\n";
+                  res += "*"+to_string(cnt)+"\r\n";  
+                  
+                  for(const auto& ms : idFound) {
+                    for(const auto& seq : ms.second) {
+                      res += "*2\r\n";
+                      res += "$"+to_string(to_string(ms.first).size() + 1 + to_string(seq.first).size())
+                      +"\r\n"+to_string(ms.first) + "-" + to_string(seq.first)+"\r\n";
+                      res += "*"+to_string(seq.second.size()*2)+"\r\n";
+                      
+                      for(const auto& kv : seq.second) {
+                        res += "$"+to_string(kv.first.size())+"\r\n"+kv.first+"\r\n";
+                        res += "$"+to_string(kv.second.size())+"\r\n"+kv.second+"\r\n";
+                      }
+                    }
+                  }
+
+                  response = res;
+                }
+                else {
+                  STREAM[tokens[4]].insert(currFD,timeoutPoint,tokens[2] == "0",tokens[5]);
+                  sendResponse = false;
+                }
+              }
+            }
+            else if(tokens[0] == "TYPE") {
+              response = handleTYPE(tokens);
+            }
+            else if(tokens[0] == "INCR") {
+              if(DATA.find(tokens[1]) == DATA.end()) {
+                response = encodeRESPint(1);
+                DATA[tokens[1]].DATA = "1";
+              }
+              else {
+                try {
+                  int val = stoi(DATA[tokens[1]].DATA);
+                  DATA[tokens[1]].DATA = to_string(val+1);
+                  response = encodeRESPint(val+1);
+                }
+                catch(...) {
+                  response = encodeRESPsimpleERR("ERR value is not an integer or out of range");
+                }
+              }
+            }
+            else if(tokens[0] == "MULTI") {
+              if(onQueue.find(currFD) == onQueue.end()) {
+                onQueue[currFD] = {};
+                response = encodeRESPsimpleSTR("OK");
+              }
+            }
+
+          if(sendResponse) send(currFD, response.c_str() , response.size() , 0);
+          } 
+          else {
+            close(currFD);
+            clients.erase(clients.begin() + i);
+            clientINFO.erase(currFD);
+          }
         }
-
         tokens.clear();
       }
     }
