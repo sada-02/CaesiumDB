@@ -939,7 +939,16 @@ int main(int argc, char **argv) {
   struct sockaddr_in server_addr;
   server_addr.sin_family = AF_INET;
   server_addr.sin_addr.s_addr = INADDR_ANY;
-  server_addr.sin_port = htons(6379);
+  if(argc == 1) {
+    server_addr.sin_port = htons(6379);
+  }
+  else {
+    for(int i=0 ;i<argc ;i++) {
+      if(argv[i] == "--port") {
+        server_addr.sin_port = htons(stoi(argv[i+1]));
+      }
+    }
+  }
   
   if (bind(serverFD, (struct sockaddr *) &server_addr, sizeof(server_addr)) != 0) {
     cerr << "Failed to bind to port 6379\n";
