@@ -662,6 +662,7 @@ void eventLoop() {
           if(onQueue.find(currFD) != onQueue.end()) {
             response = encodeRESPsimpleERR("ERR EXEC without MULTI");
           }
+          send(currFD, response.c_str() , response.size() , 0);
         }
         else if(onQueue.find(currFD) != onQueue.end()) {
           onQueue[currFD].push_back(tokens);
