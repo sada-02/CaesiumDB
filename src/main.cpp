@@ -1067,8 +1067,8 @@ int main(int argc, char **argv) {
     upperCase(tokens[0]);
 
     if(tokens[0] == "PONG") {
-      handshake = "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$" + to_string(to_string(masterPort).size())
-      + "\r\n"+ to_string(masterPort) +"\r\n";  
+      handshake = "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$" + to_string(to_string(PORT).size())
+      + "\r\n"+ to_string(PORT) +"\r\n";  
       send(masterFD, handshake.c_str(), handshake.size(), 0); 
     }
     
