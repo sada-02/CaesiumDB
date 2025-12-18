@@ -920,6 +920,9 @@ void eventLoop() {
         if(isINFO) {
          response = handleINFO(isREP);
         }
+        else if(tokens[0] == "REPLCONF") {
+          response = encodeRESPsimpleSTR("OK");
+        }
         else if(tokens[0] == "DISCARD") {
           if(onQueue.find(currFD) == onQueue.end()) {
             response = encodeRESPsimpleERR("ERR DISCARD without MULTI");
@@ -1049,8 +1052,12 @@ int main(int argc, char **argv) {
       return 1;
     }
     
-    string query = "*1\r\n$4\r\nPING\r\n";
-    send(masterFD, query.c_str(), query.size(), 0);
+    string handshake = "*1\r\n$4\r\nPING\r\n";
+    send(masterFD, handshake.c_str(), handshake.size(), 0);
+    handshake = "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$" + to_string(masterPort.size())
+    + "\r\n"+ masterPort +"\r\n";
+    send(masterFD, handshake.c_str(), handshake.size(), 0);
+    handshake = "*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n";
   }
   
   eventLoop();
