@@ -925,6 +925,10 @@ void eventLoop() {
       bool sendResponse = true;
 
       if(FD_ISSET(currFD , &readFDs)) {
+        if(replicas.find(currFD) != replicas.end()) {
+          continue;
+        }
+        
         char buffer[1024];
         int bytesRead = recv(currFD , buffer , sizeof(buffer) , 0);
         if(bytesRead > 0) {
@@ -989,9 +993,6 @@ void eventLoop() {
           send(currFD, emptyRDB, sizeof(emptyRDB), 0);
 
           replicas.insert(currFD);
-          
-          clients.erase(clients.begin() + i);
-          clientINFO.erase(currFD);
 
           sendResponse = false;
         }
