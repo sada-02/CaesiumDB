@@ -17,6 +17,7 @@
 using namespace std;
 
 int serverFD;
+int masterFD=-1;
 vector<int> clients;
 set<int> replicas; 
 map<int,struct sockaddr_in> clientINFO;
@@ -900,6 +901,8 @@ void eventLoop() {
     for(int i = clients.size() - 1; i >= 0; i--) {
       int currFD = clients[i];
       bool sendResponse = true;
+      
+      bool isFromMaster = (currFD == masterFD);
 
       if(FD_ISSET(currFD , &readFDs)) {
         char buffer[1024];
@@ -907,6 +910,11 @@ void eventLoop() {
         if(bytesRead > 0) {
           buffer[bytesRead] = '\0';
         }
+        
+        if(isFromMaster) {
+          sendResponse = false;
+        }
+        
         vector<string> tokens = RESPparser(buffer);
         string response = "";
         
@@ -1007,7 +1015,7 @@ void eventLoop() {
             close(currFD);
             clients.erase(clients.begin() + i);
             clientINFO.erase(currFD);
-            replicas.erase(currFD);  // Remove from replicas if it was one
+            replicas.erase(currFD); 
             sendResponse = false;
           }
         }
@@ -1074,7 +1082,7 @@ int main(int argc, char **argv) {
   }
   
   if(!info.isMaster && !masterHost.empty()) {
-    int masterFD = socket(AF_INET, SOCK_STREAM, 0);
+    masterFD = socket(AF_INET, SOCK_STREAM, 0);
     if(masterFD < 0) {
       cerr << "Failed to create master socket\n";
       return 1;
@@ -1141,6 +1149,13 @@ int main(int argc, char **argv) {
       handshake = "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n";
       send(masterFD, handshake.c_str(), handshake.size(), 0);
     }
+    
+    bytesRead = recv(masterFD , buffer , sizeof(buffer) , 0);
+    if(bytesRead > 0) {
+      buffer[bytesRead] = '\0';
+    }
+    
+    clients.push_back(masterFD);
   }
   
   eventLoop();
