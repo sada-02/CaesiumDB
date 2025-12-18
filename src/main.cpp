@@ -866,7 +866,18 @@ void eventLoop() {
         }
         cout << endl;
 
-        if(tokens[0] == "EXEC") {
+        if(tokens[0] == "DISCARD") {
+          if(onQueue.find(currFD) == onQueue.end()) {
+            response = encodeRESPsimpleERR("ERR DISCARD without MULTI");
+          }
+          else {
+            response = encodeRESPsimpleSTR("OK");
+            onQueue.erase(currFD);
+          }
+
+          send(currFD , response.c_str() , response.size() , 0);
+        }
+        else if(tokens[0] == "EXEC") {
           if(onQueue.find(currFD) == onQueue.end()) {
             response = encodeRESPsimpleERR("ERR EXEC without MULTI");
           }
