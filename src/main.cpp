@@ -19,7 +19,7 @@ using namespace std;
 int serverFD;
 vector<int> clients;
 map<int,struct sockaddr_in> clientINFO;
-map<int,vector<string>> onQueue;
+map<int,vector<vector<string>>> onQueue;
 
 string encodeRESP(const vector<string>& str , bool isArr = false);
 pair<map<long long, map<long, map<string,string>>>, int> checkIDExists(const string& key, string& id);
@@ -661,7 +661,7 @@ void eventLoop() {
         if(onQueue.find(currFD)) {
           onQueue[currFD].push_back(tokens);
           response = encodeRESPsimpleSTR("QUEUED");
-          send(currFD, response.c_str() , response.size() , 0)
+          send(currFD, response.c_str() , response.size() , 0);
         }
         else {
           if(bytesRead > 0) {
