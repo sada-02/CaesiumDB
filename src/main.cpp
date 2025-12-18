@@ -788,9 +788,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
 string handleINFO(bool isREP=true) {
   string response = "";
   if(isREP) {
-    string role = isMaster ? "master" : "slave";
-    string content = "role:" + role;
-    response += "$" + to_string(content.size()) + "\r\n" + content + "\r\n";
+    response+="$11\r\nrole:" + string(isMaster ? "master" : "slave") + "\r\n";
   }
 
   return response;
@@ -980,7 +978,6 @@ int main(int argc, char **argv) {
   for(int i=1; i<argc; i++) {
     if(string(argv[i]) == "--port" && i+1 < argc) {
       PORT = stoi(argv[i+1]);
-      break;
     }
     else if(string(argv[i]) == "--replicaof") {
       isMaster = false;
