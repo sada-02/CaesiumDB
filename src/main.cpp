@@ -838,6 +838,7 @@ void eventLoop() {
             try {
               int val = stoi(DATA[tokens[1]].DATA);
               DATA[tokens[1]].DATA = to_string(val+1);
+              response = encodeRESPint(val);
             }
             catch(...) {}
           }
