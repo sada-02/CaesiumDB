@@ -18,10 +18,10 @@ using namespace std;
 
 int serverFD;
 vector<int> clients;
+set<int> replicas; 
 map<int,struct sockaddr_in> clientINFO;
 map<int,vector<vector<string>>> onQueue;
 bool isMaster = true;
-set<int> replicas;
 
 string encodeRESP(const vector<string>& str , bool isArr = false);
 pair<map<long long, map<long, map<string,string>>>, int> checkIDExists(const string& key, string& id);
@@ -594,12 +594,16 @@ string handleTYPE(const vector<string>& tokens) {
 }
 
 void propagateToReplicas(const vector<string>& tokens) {
+  if(!info.isMaster || replicas.empty()) {
+    return;
+  }
+
   string command = "*" + to_string(tokens.size()) + "\r\n";
-  for (const auto& token : tokens) {
+  for(const auto& token : tokens) {
     command += "$" + to_string(token.size()) + "\r\n" + token + "\r\n";
   }
-  
-  for (int replicaFD : replicas) {
+
+  for(int replicaFD : replicas) {
     send(replicaFD, command.c_str(), command.size(), 0);
   }
 }
@@ -616,9 +620,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
   else if(tokens[0] == "SET") {
     response = "+OK\r\n";
     handleSET(tokens);
-    if(info.isMaster) {
-      propagateToReplicas(tokens);
-    }
+    propagateToReplicas(tokens);  
   }
   else if(tokens[0] == "GET") {
     handleGET(tokens[1]);
@@ -633,9 +635,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
     int lsize = handlePUSH(tokens , tokens[0][0] == 'R');
     if(lsize>0) {
       response = encodeRESPint(lsize);
-      if(info.isMaster) {
-        propagateToReplicas(tokens);
-      }
+      propagateToReplicas(tokens);
     }
   }
   else if(tokens[0] == "LRANGE") {
@@ -697,9 +697,6 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
     }
     else {
       response = encodeRESP(element , tokens.size()>2);
-      if(info.isMaster) {
-        propagateToReplicas(tokens);
-      }
     }
   }
   else if(tokens[0] == "BLPOP") {
@@ -737,10 +734,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
 
       response = encodeRESP(vector<string> {"GARBAGE" , tokens[2]});
       STREAM[tokens[1]].handleREQ(tokens[1]);
-      
-      if(info.isMaster) {
-        propagateToReplicas(tokens);
-      }
+      propagateToReplicas(tokens);  
     }
   }
   else if(tokens[0] == "XRANGE") {
@@ -800,18 +794,14 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
     if(DATA.find(tokens[1]) == DATA.end()) {
       response = encodeRESPint(1);
       DATA[tokens[1]].DATA = "1";
-      if(info.isMaster) {
-        propagateToReplicas(tokens);
-      }
+      propagateToReplicas(tokens);  
     }
     else {
       try {
         int val = stoi(DATA[tokens[1]].DATA);
         DATA[tokens[1]].DATA = to_string(val+1);
         response = encodeRESPint(val+1);
-        if(info.isMaster) {
-          propagateToReplicas(tokens);
-        }
+        propagateToReplicas(tokens); 
       }
       catch(...) {
         response = encodeRESPsimpleERR("ERR value is not an integer or out of range");
@@ -976,7 +966,6 @@ void eventLoop() {
           send(currFD, emptyRDB, sizeof(emptyRDB), 0);
 
           replicas.insert(currFD);
-
           sendResponse = false;
         }
         else if(tokens[0] == "DISCARD") {
@@ -1015,11 +1004,10 @@ void eventLoop() {
             response = generateResponse(tokens,sendResponse,currFD);
           } 
           else {
-            if(replicas.find(currFD) == replicas.end()) {
-              close(currFD);
-              clients.erase(clients.begin() + i);
-              clientINFO.erase(currFD);
-            }
+            close(currFD);
+            clients.erase(clients.begin() + i);
+            clientINFO.erase(currFD);
+            replicas.erase(currFD);  // Remove from replicas if it was one
             sendResponse = false;
           }
         }
