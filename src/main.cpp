@@ -927,6 +927,9 @@ void eventLoop() {
         else if(tokens[0] == "REPLCONF") {
           response = encodeRESPsimpleSTR("OK");
         }
+        else if(tokens[0] == "PSYNC") {
+          response = encodeRESPsimpleSTR("FULLRESYNC " + info.replicationID + " " + info.replicationOffset)
+        }
         else if(tokens[0] == "DISCARD") {
           if(onQueue.find(currFD) == onQueue.end()) {
             response = encodeRESPsimpleERR("ERR DISCARD without MULTI");
@@ -1085,6 +1088,18 @@ int main(int argc, char **argv) {
 
     if(response == "OK") {
       handshake = "*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n";
+      send(masterFD, handshake.c_str(), handshake.size(), 0);
+    }
+
+    bytesRead = recv(masterFD , buffer , sizeof(buffer) , 0);
+    if(bytesRead > 0) {
+      buffer[bytesRead] = '\0';
+    }
+    response = decodeRESPsimple(buffer);
+    upperCase(response);
+
+    if(response == "OK") {
+      handshake = "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n";
       send(masterFD, handshake.c_str(), handshake.size(), 0);
     }
   }
