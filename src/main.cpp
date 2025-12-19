@@ -260,11 +260,7 @@ void readRDB() {
   bool flag = false;
   while(file.get(c)) {
     if(c == char(0xFB)) {
-      flag = !flag;
-      if(!flag) {
-        dataField.push_back(temp);
-        temp = "";
-      }
+      flag = true;
     }
     else if(c == char(0xFF)) {
       dataField.push_back(temp);
@@ -272,7 +268,10 @@ void readRDB() {
       break;
     }
     else if(c == char(0xFE)) {
-      flag = false;
+      if(flag && temp.length() > 0) {
+        dataField.push_back(temp);
+        temp = "";
+      }
     }
     else if(flag){
       temp += c;
@@ -284,27 +283,27 @@ void readRDB() {
     long long time = 0;
     chrono::steady_clock::time_point expTime;
     if(dataField[i][0] == 0xFC) {
-      for(int j=8 ;j>0 ;j--) {
-        time += time*8 + static_cast<long long>(dataField[i][fidx+j]);
+      for(int j=1 ;j<=8 ;j++) {
+        time |= (static_cast<long long>(static_cast<unsigned char>(dataField[i][j])) << ((j-1)*8));
       }
-      sidx = 11 , fidx = sidx + static_cast<int>(dataField[i][10]);
+      sidx = 11 , fidx = sidx + static_cast<int>(static_cast<unsigned char>(dataField[i][10]));
       expTime = chrono::steady_clock::now()+chrono::milliseconds(time);
     }
-    else if(dataField[i][0] == 0xFC) {
-      for(int j=4 ;j>0 ;j--) {
-        time += time*8 + static_cast<long long>(dataField[i][fidx+j]);
+    else if(dataField[i][0] == 0xFD) {
+      for(int j=1 ;j<=4 ;j++) {
+        time |= (static_cast<long long>(static_cast<unsigned char>(dataField[i][j])) << ((j-1)*8));
       }
-      sidx = 7 , fidx = sidx + static_cast<int>(dataField[i][6]);
+      sidx = 7 , fidx = sidx + static_cast<int>(static_cast<unsigned char>(dataField[i][6]));
       expTime = chrono::steady_clock::now()+chrono::seconds(time);
     }
     else {
-      sidx = 4 , fidx = sidx + static_cast<int>(dataField[i][3]);
+      sidx = 4 , fidx = sidx + static_cast<int>(static_cast<unsigned char>(dataField[i][3]));
     }
 
     string key = "";
     for(int j=sidx ;j<fidx ;j++) key+=dataField[i][j];
     sidx = 1+fidx;
-    fidx = fidx + static_cast<int>(dataField[i][fidx]);
+    fidx = fidx + static_cast<int>(static_cast<unsigned char>(dataField[i][fidx]));
     
     string val = "";
     for(int j=sidx ;j<fidx ;j++) val+=dataField[i][j];
@@ -1119,6 +1118,7 @@ void eventLoop() {
         else if(tokens[0] == "KEYS") {
           if(tokens[1] == "*") {
             vector<string> keys ;
+            keys.push_back("GARBAGE");
             for(auto& kv : DATA) {
               keys.push_back(kv.first);
             }
