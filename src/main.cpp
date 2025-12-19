@@ -1032,7 +1032,7 @@ void eventLoop() {
          response = handleINFO(isREP);
         }
         else if(tokens[0] == "WAIT") {
-          response = encodeRESPint(0);
+          response = encodeRESPint(replicas.size());
         }
         else if(tokens[0] == "REPLCONF") {
           response = encodeRESPsimpleSTR("OK");
