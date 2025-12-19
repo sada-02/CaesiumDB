@@ -257,13 +257,19 @@ void readRDB() {
   char c;
   vector<string> dataField;
   string temp = "";
-  bool flag = false;
+  bool flag = false , header = true;
   while(file.get(c)) {
     if(c == 0xFB) {
-      flag = !flag;
-      if(!flag) {
-        dataField.push_back(temp);
+      if(!header) {
+        flag = !flag;
+        if(!flag) {
+          dataField.push_back(temp);
+          temp = "";
+        }
+      }
+      else {
         temp = "";
+        header = false;
       }
     }
     else if(c == 0xFF) {
