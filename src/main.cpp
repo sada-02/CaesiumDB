@@ -1244,6 +1244,7 @@ int main(int argc, char **argv) {
     }
   }
   
+  cout << "[MAIN] About to enter eventLoop(), masterFD=" << info.masterFD << endl;
   eventLoop();
   close(info.serverFD);
 
