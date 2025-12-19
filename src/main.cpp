@@ -22,6 +22,7 @@ set<int> replicas;
 map<int,struct sockaddr_in> clientINFO;
 map<int,vector<vector<string>>> onQueue;
 map<int, long long> replicaOffsets;
+pair<string,string> locFile;
 
 string encodeRESP(const vector<string>& str , bool isArr = false);
 pair<map<long long, map<long, map<string,string>>>, int> checkIDExists(const string& key, string& id);
@@ -825,6 +826,16 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
       response = encodeRESPsimpleERR("ERR MULTI calls can not be nested");
     }
   }
+  else if(tokens[0] == "CONFIG") {
+    if(tokens.size()>1) {
+      upperCase(tokens[1]);
+      if(tokens[1] == "GET") {
+        response = "*2\r\n$"+to_string(tokens[2].size())+"\r\n"+tokens[2]+"\r\n$";
+        string val = tokens[2]=="dir"?locFile.first:locFile.second;
+        response += to_string(val.size())+"\r\n"+val+"\r\n";
+      }
+    }
+  }
 
   return response;
 }
@@ -1230,6 +1241,12 @@ int main(int argc, char **argv) {
         masterHost = masterInfo.substr(0, spacePos);
         masterPort = stoi(masterInfo.substr(spacePos + 1));
       }
+    }
+    else if(string(argv[i]) == "--dir" && i+1 < argc) {
+      locFile.first = string(argv[i+1]);
+    }
+    else if(string(argv[i]) == "--dbfilename" && i+1 < argc) {
+      locFile.second = string(argv[i+1]);
     }
   }
   
