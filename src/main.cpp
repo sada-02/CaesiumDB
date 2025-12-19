@@ -930,28 +930,23 @@ void eventLoop() {
             
             string cmdStr(buffer + startp, endp - startp);
             vector<string> tokens = RESPparser(cmdStr.c_str());
-            bool sendResponse = false;
+            bool sendResponse = true;
             
             string response = "";
             if(!tokens.empty()) {              
               upperCase(tokens[0]);
               
-              if(tokens[0] == "REPLCONF") {
-                if(tokens.size() > 1) {
-                  try{
-                    upperCase(tokens[1]);
-                    if(tokens[1] == "GETACK") {
-                      sendResponse = true;
-                      response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n";
-                    }
-                  }
-                  catch(...) {
-
-                  }
+              if(tokens[0] == "REPLCONF" && tokens.size() > 1) {
+                upperCase(tokens[1]);
+                if(tokens[1] == "GETACK") {
+                  response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n";
                 }
-                
+                else {
+                  sendResponse = false;
+                }
               }
               else {
+                sendResponse = false;
                 response = generateResponse(tokens, sendResponse, info.masterFD);
               }
             }
@@ -1036,7 +1031,7 @@ void eventLoop() {
             upperCase(tokens[1]);
             if(tokens[1] == "GETACK") {
               isACK = true;
-              response = "*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n0\r\n";
+              response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n";
             }
           }
           catch(...) {
