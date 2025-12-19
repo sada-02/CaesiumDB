@@ -281,6 +281,7 @@ void readRDB() {
   for(int i=0 ;i<dataField.size() ;i++) {
     int sidx=0 , fidx=0;
     long long time = 0;
+    bool flag = true;
     chrono::steady_clock::time_point expTime;
     if(dataField[i][0] == 0xFC) {
       for(int j=1 ;j<=8 ;j++) {
@@ -297,6 +298,7 @@ void readRDB() {
       expTime = chrono::steady_clock::now()+chrono::seconds(time);
     }
     else {
+      flag = false;
       sidx = 4 , fidx = sidx + static_cast<int>(static_cast<unsigned char>(dataField[i][3]));
     }
 
@@ -309,7 +311,7 @@ void readRDB() {
     for(int j=sidx ;j<fidx ;j++) val+=dataField[i][j];
 
     DATA[key].DATA = val;
-    DATA[key].expiryTime = expTime;//
+    if(flag) DATA[key].expiryTime = expTime;
   }
 }
 
@@ -1418,6 +1420,7 @@ int main(int argc, char **argv) {
   }
   
   readRDB();
+  
   eventLoop();
   close(info.serverFD);
 
