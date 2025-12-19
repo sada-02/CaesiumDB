@@ -7,6 +7,7 @@
 #include <map>
 #include <set>
 #include <fstream>
+#include <filesystem>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -271,7 +272,7 @@ void readRDB() {
       break;
     }
     else {
-      temp += string(c);
+      temp += c;
     }
   }
 
@@ -279,34 +280,43 @@ void readRDB() {
     int sidx=0 , fidx=0;
     long long time = 0;
     chrono::steady_clock::time_point expTime;
-    if(dataField[i][0] == 0xFC) {
-      for(int j=8 ;j>0 ;j--) {
-        time += time*8 + static_cast<long long>(dataField[i][fidx+j]);
+    bool hasExpiry = false;
+    
+    if(dataField[i][0] == (char)0xFC) {
+      for(int j=1 ;j<=8 ;j++) {
+        time |= (static_cast<long long>(static_cast<unsigned char>(dataField[i][j])) << ((j-1) * 8));
       }
-      sidx = 11 , fidx = sidx + static_cast<int>(dataField[i][10]);
+      sidx = 11;
+      fidx = sidx + static_cast<unsigned char>(dataField[i][10]);
       expTime = chrono::steady_clock::now()+chrono::milliseconds(time);
+      hasExpiry = true;
     }
-    else if(dataField[i][0] == 0xFC) {
-      for(int j=4 ;j>0 ;j--) {
-        time += time*8 + static_cast<long long>(dataField[i][fidx+j]);
+    else if(dataField[i][0] == (char)0xFD) {
+      for(int j=1 ;j<=4 ;j++) {
+        time |= (static_cast<long long>(static_cast<unsigned char>(dataField[i][j])) << ((j-1) * 8));
       }
-      sidx = 7 , fidx = sidx + static_cast<int>(dataField[i][6]);
+      sidx = 7;
+      fidx = sidx + static_cast<unsigned char>(dataField[i][6]);
       expTime = chrono::steady_clock::now()+chrono::seconds(time);
+      hasExpiry = true;
     }
     else {
-      sidx = 4 , fidx = sidx + static_cast<int>(dataField[i][3]);
+      sidx = 4;
+      fidx = sidx + static_cast<unsigned char>(dataField[i][3]);
     }
 
     string key = "";
     for(int j=sidx ;j<fidx ;j++) key+=dataField[i][j];
     sidx = 1+fidx;
-    fidx = fidx + static_cast<int>(dataField[i][fidx]);
+    fidx = fidx + static_cast<unsigned char>(dataField[i][fidx]);
     
     string val = "";
     for(int j=sidx ;j<fidx ;j++) val+=dataField[i][j];
 
     DATA[key].DATA = val;
-    DATA[key].expiryTime = expTime;
+    if(hasExpiry) {
+      DATA[key].expiryTime = expTime;
+    }
   }
 }
 
@@ -1328,6 +1338,8 @@ int main(int argc, char **argv) {
   server_addr.sin_port = htons(PORT);
   info.replicationID = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
   info.replicationOffset = "0";
+  
+  readRDB();
   
   if (bind(info.serverFD, (struct sockaddr *) &server_addr, sizeof(server_addr)) != 0) {
     cerr << "Failed to bind to port " << PORT << "\n";
