@@ -249,6 +249,7 @@ string decodeRESPsimple(const char* str) {
 }
 
 void readRDB() {
+  if(!locFile.first.size()) return;
   fs::path filePath = fs::path(locFile.first+"/"+locFile.second);
   if(!fs::exists(filePath)) return;
   ifstream file(filePath,ios::binary);
