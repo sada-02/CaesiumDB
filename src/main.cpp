@@ -1125,6 +1125,7 @@ void eventLoop() {
         else if(tokens[0] == "KEYS") {
           if(tokens[1] == "*") {
             vector<string> keys ;
+            keys.push_back("GARBAGE");
             for(auto& kv : DATA) {
               keys.push_back(kv.first);
             }
