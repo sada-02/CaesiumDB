@@ -6,6 +6,7 @@
 #include <deque>
 #include <map>
 #include <set>
+#include <fstream>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -16,6 +17,7 @@
 #include <optional>
 #include <climits>
 using namespace std;
+namespace fs = filesystem;
 
 vector<int> clients;
 set<int> replicas; 
@@ -243,6 +245,69 @@ string encodeRESPsimpleERR(const string& str) {
 
 string decodeRESPsimple(const char* str) {
   return string(str).substr(1,string(str).size()-3);
+}
+
+void readRDB() {
+  fs::path filePath = fs::path(locFile.first+"/"+locFile.second);
+  if(!fs::exists(filePath)) return;
+  ifstream file(filePath,ios::binary);
+  if(!file.is_open()) return;
+
+  char c;
+  vector<string> dataField;
+  string temp = "";
+  bool flag = false;
+  while(file.get(c)) {
+    if(c == 0xFB) {
+      flag = !flag;
+      if(!flag) {
+        dataField.push_back(temp);
+        temp = "";
+      }
+    }
+    else if(c == 0xFF) {
+      dataField.push_back(temp);
+      temp = "";
+      break;
+    }
+    else {
+      temp += string(c);
+    }
+  }
+
+  for(int i=0 ;i<dataField.size() ;i++) {
+    int sidx=0 , fidx=0;
+    long long time = 0;
+    chrono::steady_clock::time_point expTime;
+    if(dataField[i][0] == 0xFC) {
+      for(int j=8 ;j>0 ;j--) {
+        time += time*8 + static_cast<long long>(dataField[i][fidx+j]);
+      }
+      sidx = 11 , fidx = sidx + static_cast<int>(dataField[i][10]);
+      expTime = chrono::steady_clock::now()+chrono::milliseconds(time);
+    }
+    else if(dataField[i][0] == 0xFC) {
+      for(int j=4 ;j>0 ;j--) {
+        time += time*8 + static_cast<long long>(dataField[i][fidx+j]);
+      }
+      sidx = 7 , fidx = sidx + static_cast<int>(dataField[i][6]);
+      expTime = chrono::steady_clock::now()+chrono::seconds(time);
+    }
+    else {
+      sidx = 4 , fidx = sidx + static_cast<int>(dataField[i][3]);
+    }
+
+    string key = "";
+    for(int j=sidx ;j<fidx ;j++) key+=dataField[i][j];
+    sidx = 1+fidx;
+    fidx = fidx + static_cast<int>(dataField[i][fidx]);
+    
+    string val = "";
+    for(int j=sidx ;j<fidx ;j++) val+=dataField[i][j];
+
+    DATA[key].DATA = val;
+    DATA[key].expiryTime = expTime;
+  }
 }
 
 void upperCase(string& str) {
@@ -1046,6 +1111,16 @@ void eventLoop() {
 
         if(isINFO) {
          response = handleINFO(isREP);
+        }
+        else if(tokens[0] == "KEYS") {
+          if(tokens[1] == "*") {
+            vector<string> keys ;
+            for(auto& kv : DATA) {
+              keys.push_back(kv.first);
+            }
+
+            response = encodeRESP(keys,true);
+          }
         }
         else if(tokens[0] == "WAIT") {
           int numReplicas = stoi(tokens[1]);
