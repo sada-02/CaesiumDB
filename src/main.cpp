@@ -946,7 +946,7 @@ void eventLoop() {
             }
 
             if(sendResponse) {
-              send(info.masterFD , reponse.c_str() , response.size() , 0);
+              send(info.masterFD , response.c_str() , response.size() , 0);
             }
             
             pos = endp;
@@ -1027,6 +1027,9 @@ void eventLoop() {
               isACK = true;
               response = "*3\r\n$8\r\nreplconf\r\n$6\r\ngetack\r\n$1\r\n*\r\n";
             }
+          }
+          catch(...) {
+            
           }
 
           if(!isACK) response = encodeRESPsimpleSTR("OK");
