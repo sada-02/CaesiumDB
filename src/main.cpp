@@ -1036,7 +1036,7 @@ void eventLoop() {
             upperCase(tokens[1]);
             if(tokens[1] == "GETACK") {
               isACK = true;
-              response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n";
+              response = "*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n0\r\n";
             }
           }
           catch(...) {
