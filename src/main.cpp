@@ -838,7 +838,6 @@ string handleINFO(bool isREP=true) {
 }
 
 void eventLoop() {
-  cerr << "[EVENTLOOP] Starting, masterFD=" << info.masterFD << ", serverFD=" << info.serverFD << endl;
   while(true) {
     fd_set readFDs;
     FD_ZERO(&readFDs);
@@ -848,7 +847,6 @@ void eventLoop() {
     if(info.masterFD >= 0) {
       FD_SET(info.masterFD, &readFDs);
       maxFD = max(maxFD, info.masterFD);
-      cerr << "[EVENTLOOP] Monitoring masterFD=" << info.masterFD << endl;
     }
 
     for(int id : clients) {
@@ -898,10 +896,8 @@ void eventLoop() {
     checkBlockedTimeouts();
 
     if(info.masterFD >= 0 && FD_ISSET(info.masterFD, &readFDs)) {
-      cerr << "[EVENTLOOP] Data available on masterFD" << endl;
       char buffer[4096];
       int bytesRead = recv(info.masterFD, buffer, sizeof(buffer), 0);
-      cerr << "[EVENTLOOP] Received " << bytesRead << " bytes" << endl;
       
       if(bytesRead > 0) {
         buffer[bytesRead] = '\0';
@@ -937,30 +933,20 @@ void eventLoop() {
             vector<string> tokens = RESPparser(cmdStr.c_str());
             bool sendResponse = true;
             
-            cerr << "[DEBUG] Received command from master: ";
-            for(const auto& t : tokens) {
-              cerr << "\"" << t << "\" ";
-            }
-            cerr << endl;
-            
             string response = "";
             if(!tokens.empty()) {              
               upperCase(tokens[0]);
-              cerr << "[DEBUG] tokens[0]=" << tokens[0] << endl;
               
               if(tokens[0] == "REPLCONF" && tokens.size() > 1) {
                 upperCase(tokens[1]);
-                cerr << "[DEBUG] tokens[1]=" << tokens[1] << endl;
                 if(tokens[1] == "GETACK") {
                   response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$"+to_string(info.replicationOffset.size())
                   +"\r\n"+info.replicationOffset+"\r\n";
-                  cerr << "[DEBUG] Sending ACK response, offset=" << info.replicationOffset << endl;
-                  info.replicationOffset = to_string(stoi(info.replicationOffset)+cmdStr.size());
                 }
                 else {
                   sendResponse = false;
-                  info.replicationOffset = to_string(stoi(info.replicationOffset)+cmdStr.size());
                 }
+                info.replicationOffset = to_string(stoi(info.replicationOffset)+cmdStr.size());
               }
               else {
                 sendResponse = false;
@@ -969,10 +955,8 @@ void eventLoop() {
               }
             }
 
-            cerr << "[DEBUG] sendResponse=" << sendResponse << ", response.size()=" << response.size() << endl;
             if(sendResponse) {
-              int sent = send(info.masterFD , response.c_str() , response.size() , 0);
-              cerr << "[DEBUG] Sent " << sent << " bytes" << endl;
+              send(info.masterFD , response.c_str() , response.size() , 0);
             }
             
             pos = endp;
@@ -1044,6 +1028,9 @@ void eventLoop() {
 
         if(isINFO) {
          response = handleINFO(isREP);
+        }
+        else if(tokens[0] == "WAIT") {
+          response = encodeRESPint(0);
         }
         else if(tokens[0] == "REPLCONF") {
           response = encodeRESPsimpleSTR("OK");
@@ -1199,6 +1186,9 @@ int main(int argc, char **argv) {
       return 1;
     }
     
+    int flags = fcntl(info.masterFD, F_GETFL, 0);
+    fcntl(info.masterFD, F_SETFL, flags | O_NONBLOCK);
+    
     char buffer[1024];
     int bytesRead;
     string response;
@@ -1249,7 +1239,6 @@ int main(int argc, char **argv) {
     }
   }
   
-  cerr << "[MAIN] About to enter eventLoop, masterFD=" << info.masterFD << endl;
   eventLoop();
   close(info.serverFD);
 
