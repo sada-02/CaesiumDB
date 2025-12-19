@@ -1238,9 +1238,6 @@ int main(int argc, char **argv) {
       if(bytesRead > 0) {
         buffer[bytesRead] = '\0';
       }
-      
-      bytesRead = recv(info.masterFD, buffer, sizeof(buffer), 0);
-      if(bytesRead > 0) {}
     }
   }
   
