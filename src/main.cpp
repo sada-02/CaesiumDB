@@ -941,7 +941,7 @@ void eventLoop() {
               if(tokens[0] == "REPLCONF" && tokens.size() > 1) {
                 upperCase(tokens[1]);
                 if(tokens[1] == "GETACK") {
-                  response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$"+info.replicationOffset.size()
+                  response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$"+to_string(info.replicationOffset.size())
                   +"\r\n"+info.replicationOffset+"\r\n";
                 }
                 else {
