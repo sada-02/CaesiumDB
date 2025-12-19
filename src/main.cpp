@@ -1055,12 +1055,49 @@ void eventLoop() {
             auto stime = chrono::steady_clock::now();
             auto etime = stime + chrono::milliseconds(timeout);
             int cnt = 0;
-            long long currentOffset = stoll(info.replicationOffset);
+            long long currOffset = stoll(info.replicationOffset);
             
             while(chrono::steady_clock::now() < etime) {
+              fd_set readFDs;
+              FD_ZERO(&readFDs);
+              int maxFD = -1;
+              
+              for(int replicaFD : replicas) {
+                FD_SET(replicaFD, &readFDs);
+                maxFD = max(maxFD, replicaFD);
+              }
+              
+              auto rem = etime - chrono::steady_clock::now();
+              if(rem.count() <= 0) break;
+              
+              auto sec = chrono::duration_cast<chrono::seconds>(rem);
+              auto ms = chrono::duration_cast<chrono::microseconds>(rem - sec);
+              
+              struct timeval tv;
+              tv.tv_sec = sec.count();
+              tv.tv_usec = ms.count();
+              
+              int ready = select(maxFD + 1, &readFDs, NULL, NULL, &tv);
+              
+              if(ready > 0) {
+                for(int replicaFD : replicas) {
+                  if(FD_ISSET(replicaFD, &readFDs)) {
+                    char buffer[1024];
+                    int bytesRead = recv(replicaFD, buffer, sizeof(buffer), MSG_DONTWAIT);
+                    if(bytesRead > 0) {
+                      buffer[bytesRead] = '\0';
+                      vector<string> ackTokens = RESPparser(buffer);
+                      if(ackTokens.size() >= 3 && ackTokens[0] == "REPLCONF" && ackTokens[1] == "ACK") {
+                        replicaOffsets[replicaFD] = stoll(ackTokens[2]);
+                      }
+                    }
+                  }
+                }
+              }
+              
               cnt = 0;
               for(int replicaFD : replicas) {
-                if(replicaOffsets[replicaFD] >= currentOffset) {
+                if(replicaOffsets[replicaFD] >= currOffset) {
                   cnt++;
                 }
               }
@@ -1068,8 +1105,6 @@ void eventLoop() {
               if(cnt >= numReplicas) {
                 break;
               }
-              
-              usleep(1000);
             }
             
             info.lastWaitOffset = info.replicationOffset;
