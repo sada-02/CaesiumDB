@@ -309,7 +309,7 @@ void readRDB() {
     for(int j=sidx ;j<fidx ;j++) val+=dataField[i][j];
 
     DATA[key].DATA = val;
-    DATA[key].expiryTime = expTime;
+    DATA[key].expiryTime = expTime;//
   }
 }
 
