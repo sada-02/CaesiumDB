@@ -16,13 +16,10 @@
 #include <climits>
 using namespace std;
 
-int serverFD;
-int masterFD = -1; 
 vector<int> clients;
 set<int> replicas; 
 map<int,struct sockaddr_in> clientINFO;
 map<int,vector<vector<string>>> onQueue;
-bool isMaster = true;
 
 string encodeRESP(const vector<string>& str , bool isArr = false);
 pair<map<long long, map<long, map<string,string>>>, int> checkIDExists(const string& key, string& id);
@@ -168,9 +165,12 @@ struct InfoServer{
   bool isMaster;
   string replicationID;
   string replicationOffset;
+  int masterFD;
+  int serverFD;
 
   InfoServer() {
     isMaster = true;
+    masterFD=-1;
   }
 };
 
@@ -840,12 +840,12 @@ void eventLoop() {
   while(true) {
     fd_set readFDs;
     FD_ZERO(&readFDs);
-    FD_SET(serverFD,&readFDs);
-    int maxFD = serverFD;
+    FD_SET(info.serverFD,&readFDs);
+    int maxFD = info.serverFD;
 
-    if(masterFD >= 0) {
-      FD_SET(masterFD, &readFDs);
-      maxFD = max(maxFD, masterFD);
+    if(info.masterFD >= 0) {
+      FD_SET(info.masterFD, &readFDs);
+      maxFD = max(maxFD, info.masterFD);
     }
 
     for(int id : clients) {
@@ -894,9 +894,9 @@ void eventLoop() {
     
     checkBlockedTimeouts();
 
-    if(masterFD >= 0 && FD_ISSET(masterFD, &readFDs)) {
+    if(info.masterFD >= 0 && FD_ISSET(info.masterFD, &readFDs)) {
       char buffer[4096];
-      int bytesRead = recv(masterFD, buffer, sizeof(buffer), 0);
+      int bytesRead = recv(info.masterFD, buffer, sizeof(buffer), 0);
       
       if(bytesRead > 0) {
         buffer[bytesRead] = '\0';
@@ -930,12 +930,23 @@ void eventLoop() {
             
             string cmdStr(buffer + startp, endp - startp);
             vector<string> tokens = RESPparser(cmdStr.c_str());
+            bool sendResponse = true;
             
+            string response = "";
             if(!tokens.empty()) {              
               upperCase(tokens[0]);
               
-              bool sendResponse = false;
-              generateResponse(tokens, sendResponse, masterFD);
+              if(tokens[0] == "REPLCONF") {
+                response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n";
+              }
+              else {
+                sendResponse = false;
+                response = generateResponse(tokens, sendResponse, info.masterFD);
+              }
+            }
+
+            if(sendResponse) {
+              send(info.masterFD , reponse.c_str() , response.size() , 0);
             }
             
             pos = endp;
@@ -946,15 +957,15 @@ void eventLoop() {
         }
       } 
       else if(bytesRead == 0) {
-        close(masterFD);
-        masterFD = -1;
+        close(info.masterFD);
+        info.masterFD = -1;
       }
     }
 
-    if(FD_ISSET(serverFD,&readFDs)) {
+    if(FD_ISSET(info.serverFD,&readFDs)) {
       struct sockaddr_in client_addr;
       int client_addr_len = sizeof(client_addr);
-      int clientFD = accept(serverFD, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
+      int clientFD = accept(info.serverFD, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
       clientINFO[clientFD] = client_addr;
       clients.push_back(clientFD);
       cout << "Client connected\n";
@@ -1009,7 +1020,16 @@ void eventLoop() {
          response = handleINFO(isREP);
         }
         else if(tokens[0] == "REPLCONF") {
-          response = encodeRESPsimpleSTR("OK");
+          bool isACK = false;
+          try {
+            upperCase(tokens[1]);
+            if(tokens[1] == "GETACK") {
+              isACK = true;
+              response = "*3\r\n$8\r\nreplconf\r\n$6\r\ngetack\r\n$1\r\n*\r\n";
+            }
+          }
+
+          if(!isACK) response = encodeRESPsimpleSTR("OK");
         }
         else if(tokens[0] == "PSYNC") {
           response = encodeRESPsimpleSTR("FULLRESYNC " + info.replicationID + " " +
@@ -1087,14 +1107,14 @@ int main(int argc, char **argv) {
   cout << unitbuf;
   cerr << unitbuf;
   
-  serverFD = socket(AF_INET, SOCK_STREAM, 0);
-  if (serverFD < 0) {
+  info.serverFD = socket(AF_INET, SOCK_STREAM, 0);
+  if (info.serverFD < 0) {
    cerr << "Failed to create server socket\n";
    return 1;
   }
   
   int reuse = 1;
-  if (setsockopt(serverFD, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0) {
+  if (setsockopt(info.serverFD, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0) {
     cerr << "setsockopt failed\n";
     return 1;
   }
@@ -1126,20 +1146,20 @@ int main(int argc, char **argv) {
   info.replicationID = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb";
   info.replicationOffset = "0";
   
-  if (bind(serverFD, (struct sockaddr *) &server_addr, sizeof(server_addr)) != 0) {
+  if (bind(info.serverFD, (struct sockaddr *) &server_addr, sizeof(server_addr)) != 0) {
     cerr << "Failed to bind to port " << PORT << "\n";
     return 1;
   }
   
   int connection_backlog = 5;
-  if (listen(serverFD, connection_backlog) != 0) {
+  if (listen(info.serverFD, connection_backlog) != 0) {
     cerr << "listen failed\n";
     return 1;
   }
   
   if(!info.isMaster && !masterHost.empty()) {
-    masterFD = socket(AF_INET, SOCK_STREAM, 0);
-    if(masterFD < 0) {
+    info.masterFD = socket(AF_INET, SOCK_STREAM, 0);
+    if(info.masterFD < 0) {
       cerr << "Failed to create master socket\n";
       return 1;
     }
@@ -1157,7 +1177,7 @@ int main(int argc, char **argv) {
       memcpy(&master_addr.sin_addr, he->h_addr_list[0], he->h_length);
     }
     
-    if(connect(masterFD, (struct sockaddr*)&master_addr, sizeof(master_addr)) < 0) {
+    if(connect(info.masterFD, (struct sockaddr*)&master_addr, sizeof(master_addr)) < 0) {
       cerr << "Failed to connect to master\n";
       return 1;
     }
@@ -1167,9 +1187,9 @@ int main(int argc, char **argv) {
     string response;
 
     string handshake = "*1\r\n$4\r\nPING\r\n";
-    send(masterFD, handshake.c_str(), handshake.size(), 0);
+    send(info.masterFD, handshake.c_str(), handshake.size(), 0);
 
-    bytesRead = recv(masterFD , buffer , sizeof(buffer) , 0);
+    bytesRead = recv(info.masterFD , buffer , sizeof(buffer) , 0);
     if(bytesRead > 0) {
       buffer[bytesRead] = '\0';
     }
@@ -1179,10 +1199,10 @@ int main(int argc, char **argv) {
     if(response == "PONG") {
       handshake = "*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$" + to_string(to_string(PORT).size())
       + "\r\n"+ to_string(PORT) +"\r\n";  
-      send(masterFD, handshake.c_str(), handshake.size(), 0); 
+      send(info.masterFD, handshake.c_str(), handshake.size(), 0); 
     }
     
-    bytesRead = recv(masterFD , buffer , sizeof(buffer) , 0);
+    bytesRead = recv(info.masterFD , buffer , sizeof(buffer) , 0);
     if(bytesRead > 0) {
       buffer[bytesRead] = '\0';
     }
@@ -1191,10 +1211,10 @@ int main(int argc, char **argv) {
 
     if(response == "OK") {
       handshake = "*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n";
-      send(masterFD, handshake.c_str(), handshake.size(), 0);
+      send(info.masterFD, handshake.c_str(), handshake.size(), 0);
     }
 
-    bytesRead = recv(masterFD , buffer , sizeof(buffer) , 0);
+    bytesRead = recv(info.masterFD , buffer , sizeof(buffer) , 0);
     if(bytesRead > 0) {
       buffer[bytesRead] = '\0';
     }
@@ -1203,20 +1223,20 @@ int main(int argc, char **argv) {
 
     if(response == "OK") {
       handshake = "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n";
-      send(masterFD, handshake.c_str(), handshake.size(), 0);
+      send(info.masterFD, handshake.c_str(), handshake.size(), 0);
       
-      bytesRead = recv(masterFD, buffer, sizeof(buffer), 0);
+      bytesRead = recv(info.masterFD, buffer, sizeof(buffer), 0);
       if(bytesRead > 0) {
         buffer[bytesRead] = '\0';
       }
       
-      bytesRead = recv(masterFD, buffer, sizeof(buffer), 0);
+      bytesRead = recv(info.masterFD, buffer, sizeof(buffer), 0);
       if(bytesRead > 0) {}
     }
   }
   
   eventLoop();
-  close(serverFD);
+  close(info.serverFD);
 
   return 0;
 }
