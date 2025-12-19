@@ -930,7 +930,7 @@ void eventLoop() {
             
             string cmdStr(buffer + startp, endp - startp);
             vector<string> tokens = RESPparser(cmdStr.c_str());
-            bool sendResponse = true;
+            bool sendResponse = false;
             
             string response = "";
             if(!tokens.empty()) {              
@@ -940,18 +940,15 @@ void eventLoop() {
                 upperCase(tokens[1]);
                 if(tokens[1] == "GETACK") {
                   response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n";
-                }
-                else {
-                  sendResponse = false;
+                  sendResponse = true;
                 }
               }
               else {
-                sendResponse = false;
                 response = generateResponse(tokens, sendResponse, info.masterFD);
               }
             }
 
-            if(sendResponse) {
+            if(sendResponse && !response.empty()) {
               send(info.masterFD , response.c_str() , response.size() , 0);
             }
             
