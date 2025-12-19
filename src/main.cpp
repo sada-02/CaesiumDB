@@ -930,19 +930,27 @@ void eventLoop() {
             }
             
             string cmdStr(buffer + startp, endp - startp);
-            info.replicationOffset = to_string(stoi(info.replicationOffset)+cmdStr.size());
             vector<string> tokens = RESPparser(cmdStr.c_str());
             bool sendResponse = true;
+            
+            cerr << "[DEBUG] Received command from master: ";
+            for(const auto& t : tokens) {
+              cerr << "\"" << t << "\" ";
+            }
+            cerr << endl;
             
             string response = "";
             if(!tokens.empty()) {              
               upperCase(tokens[0]);
+              cerr << "[DEBUG] tokens[0]=" << tokens[0] << endl;
               
               if(tokens[0] == "REPLCONF" && tokens.size() > 1) {
                 upperCase(tokens[1]);
+                cerr << "[DEBUG] tokens[1]=" << tokens[1] << endl;
                 if(tokens[1] == "GETACK") {
                   response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$"+to_string(info.replicationOffset.size())
                   +"\r\n"+info.replicationOffset+"\r\n";
+                  cerr << "[DEBUG] Sending ACK response, offset=" << info.replicationOffset << endl;
                 }
                 else {
                   sendResponse = false;
@@ -951,11 +959,14 @@ void eventLoop() {
               else {
                 sendResponse = false;
                 response = generateResponse(tokens, sendResponse, info.masterFD);
+                info.replicationOffset = to_string(stoi(info.replicationOffset)+cmdStr.size());
               }
             }
 
+            cerr << "[DEBUG] sendResponse=" << sendResponse << ", response.size()=" << response.size() << endl;
             if(sendResponse) {
-              send(info.masterFD , response.c_str() , response.size() , 0);
+              int sent = send(info.masterFD , response.c_str() , response.size() , 0);
+              cerr << "[DEBUG] Sent " << sent << " bytes" << endl;
             }
             
             pos = endp;
