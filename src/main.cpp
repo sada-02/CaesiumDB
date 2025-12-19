@@ -258,9 +258,15 @@ void readRDB() {
   vector<string> dataField;
   string temp = "";
   bool flag = false;
+  bool skipNext = false;
   while(file.get(c)) {
+    if(skipNext) {
+      skipNext = false;
+      continue;
+    }
     if(c == char(0xFB)) {
       flag = true;
+      skipNext = true;  
     }
     else if(c == char(0xFF)) {
       dataField.push_back(temp);
