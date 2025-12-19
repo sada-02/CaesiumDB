@@ -21,6 +21,7 @@ vector<int> clients;
 set<int> replicas; 
 map<int,struct sockaddr_in> clientINFO;
 map<int,vector<vector<string>>> onQueue;
+map<int, long long> replicaOffsets;
 
 string encodeRESP(const vector<string>& str , bool isArr = false);
 pair<map<long long, map<long, map<string,string>>>, int> checkIDExists(const string& key, string& id);
@@ -166,6 +167,7 @@ struct InfoServer{
   bool isMaster;
   string replicationID;
   string replicationOffset;
+  string lastWaitOffset;
   int masterFD;
   int serverFD;
 
@@ -173,6 +175,7 @@ struct InfoServer{
     isMaster = true;
     masterFD = -1;
     replicationOffset = "0";
+    lastWaitOffset = "0";
   }
 };
 
@@ -609,6 +612,8 @@ void propagateToReplicas(const vector<string>& tokens) {
   for(int replicaFD : replicas) {
     send(replicaFD, command.c_str(), command.size(), 0);
   }
+  
+  info.replicationOffset = to_string(stoll(info.replicationOffset) + command.size());
 }
 
 string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD) {
@@ -1032,10 +1037,53 @@ void eventLoop() {
          response = handleINFO(isREP);
         }
         else if(tokens[0] == "WAIT") {
-          response = encodeRESPint(replicas.size());
+          int numReplicas = stoi(tokens[1]);
+          int timeout = stoi(tokens[2]);
+          
+          if(replicas.empty()) {
+            response = encodeRESPint(0);
+          }
+          else if(info.replicationOffset == info.lastWaitOffset) {
+            response = encodeRESPint(replicas.size());
+          }
+          else {
+            string getack = "*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n";
+            for(int replicaFD : replicas) {
+              send(replicaFD, getack.c_str(), getack.size(), 0);
+            }
+            
+            auto stime = chrono::steady_clock::now();
+            auto etime = stime + chrono::milliseconds(timeout);
+            int cnt = 0;
+            long long currentOffset = stoll(info.replicationOffset);
+            
+            while(chrono::steady_clock::now() < etime) {
+              cnt = 0;
+              for(int replicaFD : replicas) {
+                if(replicaOffsets[replicaFD] >= currentOffset) {
+                  cnt++;
+                }
+              }
+              
+              if(cnt >= numReplicas) {
+                break;
+              }
+              
+              usleep(1000);
+            }
+            
+            info.lastWaitOffset = info.replicationOffset;
+            response = encodeRESPint(cnt);
+          }
         }
         else if(tokens[0] == "REPLCONF") {
-          response = encodeRESPsimpleSTR("OK");
+          if(tokens.size() >= 3 && tokens[1] == "ACK") {
+            replicaOffsets[currFD] = stoll(tokens[2]);
+            sendResponse = false;
+          }
+          else {
+            response = encodeRESPsimpleSTR("OK");
+          }
         }
         else if(tokens[0] == "PSYNC") {
           response = encodeRESPsimpleSTR("FULLRESYNC " + info.replicationID + " " +
@@ -1055,6 +1103,7 @@ void eventLoop() {
           send(currFD, emptyRDB, sizeof(emptyRDB), 0);
 
           replicas.insert(currFD);
+          replicaOffsets[currFD] = 0;
 
           sendResponse = false;
         }
@@ -1097,7 +1146,8 @@ void eventLoop() {
             close(currFD);
             clients.erase(clients.begin() + i);
             clientINFO.erase(currFD);
-            replicas.erase(currFD);  
+            replicas.erase(currFD);
+            replicaOffsets.erase(currFD);  
             sendResponse = false;
           }
         }
