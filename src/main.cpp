@@ -1187,9 +1187,6 @@ int main(int argc, char **argv) {
       return 1;
     }
     
-    int flags = fcntl(info.masterFD, F_GETFL, 0);
-    fcntl(info.masterFD, F_SETFL, flags | O_NONBLOCK);
-    
     char buffer[1024];
     int bytesRead;
     string response;
@@ -1238,6 +1235,9 @@ int main(int argc, char **argv) {
         buffer[bytesRead] = '\0';
       }
     }
+    
+    int flags = fcntl(info.masterFD, F_GETFL, 0);
+    fcntl(info.masterFD, F_SETFL, flags | O_NONBLOCK);
   }
   
   eventLoop();
