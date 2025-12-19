@@ -254,64 +254,50 @@ void readRDB() {
   ifstream file(filePath,ios::binary);
   if(!file.is_open()) return;
 
-  char c;
-  vector<string> dataField;
-  string temp = "";
-  bool flag = false;
-  while(file.get(c)) {
-    if(c == char(0xFB)) {
-      flag = true;
-    }
-    else if(c == char(0xFF)) {
-      dataField.push_back(temp);
-      temp = "";
-      break;
-    }
-    else if(c == char(0xFE)) {
-      if(flag && temp.length() > 0) {
-        dataField.push_back(temp);
-        temp = "";
-      }
-    }
-    else if(flag){
-      temp += c;
-    }
-  }
-
-  for(int i=0 ;i<dataField.size() ;i++) {
-    int sidx=0 , fidx=0;
+  vector<char> buffer((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
+  
+  size_t idx = 0;
+  while(idx < buffer.size() && buffer[idx] != char(0xFE) && buffer[idx] != char(0xFB)) idx++;
+  
+  while(idx < buffer.size() && buffer[idx] != char(0xFB)) idx++;
+  if(idx >= buffer.size()) return;
+  idx+=3;
+  
+  while(idx < buffer.size() && buffer[idx] != char(0xFF)) {
+    int sidx = 0, fidx = 0;
     long long time = 0;
-    bool flag = true;
     chrono::steady_clock::time_point expTime;
-    if(dataField[i][0] == 0xFC) {
-      for(int j=1 ;j<=8 ;j++) {
-        time |= (static_cast<long long>(static_cast<unsigned char>(dataField[i][j])) << ((j-1)*8));
+    
+    if(buffer[idx] == char(0xFC)) {
+      idx++; 
+      for(int j=0; j<8; j++) {
+        time |= (static_cast<long long>(static_cast<unsigned char>(buffer[idx++])) << (j*8));
       }
-      sidx = 11 , fidx = sidx + static_cast<int>(static_cast<unsigned char>(dataField[i][10]));
       expTime = chrono::steady_clock::now()+chrono::milliseconds(time);
+      idx++; 
     }
-    else if(dataField[i][0] == 0xFD) {
-      for(int j=1 ;j<=4 ;j++) {
-        time |= (static_cast<long long>(static_cast<unsigned char>(dataField[i][j])) << ((j-1)*8));
+    else if(buffer[idx] == char(0xFD)) {
+      idx++;
+      for(int j=0; j<4; j++) {
+        time |= (static_cast<long long>(static_cast<unsigned char>(buffer[idx++])) << (j*8));
       }
-      sidx = 7 , fidx = sidx + static_cast<int>(static_cast<unsigned char>(dataField[i][6]));
       expTime = chrono::steady_clock::now()+chrono::seconds(time);
+      idx++; 
     }
     else {
-      flag = false;
-      sidx = 4 , fidx = sidx + static_cast<int>(static_cast<unsigned char>(dataField[i][3]));
+      idx++;
     }
-
-    string key = "";
-    for(int j=sidx ;j<fidx ;j++) key+=dataField[i][j];
-    sidx = 1+fidx;
-    fidx = fidx + static_cast<int>(static_cast<unsigned char>(dataField[i][fidx]));
     
+    int keyLen = static_cast<unsigned char>(buffer[idx++]);
+    string key = "";
+    for(int j=0; j<keyLen; j++) key += buffer[idx++];
+    
+    int valLen = static_cast<unsigned char>(buffer[idx++]);
     string val = "";
-    for(int j=sidx ;j<fidx ;j++) val+=dataField[i][j];
-
+    for(int j=0; j<valLen; j++) val += buffer[idx++];
+    
     DATA[key].DATA = val;
-    if(flag) DATA[key].expiryTime = expTime;
+    if(time > 0) DATA[key].expiryTime = expTime;
   }
 }
 
@@ -1420,7 +1406,7 @@ int main(int argc, char **argv) {
   }
   
   readRDB();
-  
+
   eventLoop();
   close(info.serverFD);
 
