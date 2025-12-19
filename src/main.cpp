@@ -170,7 +170,8 @@ struct InfoServer{
 
   InfoServer() {
     isMaster = true;
-    masterFD=-1;
+    masterFD = -1;
+    replicationOffset = "0";
   }
 };
 
@@ -837,7 +838,6 @@ string handleINFO(bool isREP=true) {
 }
 
 void eventLoop() {
-  cout << "[EVENTLOOP] Starting event loop, masterFD=" << info.masterFD << ", serverFD=" << info.serverFD << endl;
   while(true) {
     fd_set readFDs;
     FD_ZERO(&readFDs);
@@ -847,7 +847,6 @@ void eventLoop() {
     if(info.masterFD >= 0) {
       FD_SET(info.masterFD, &readFDs);
       maxFD = max(maxFD, info.masterFD);
-      cout << "[EVENTLOOP] Monitoring masterFD=" << info.masterFD << endl;
     }
 
     for(int id : clients) {
@@ -897,10 +896,8 @@ void eventLoop() {
     checkBlockedTimeouts();
 
     if(info.masterFD >= 0 && FD_ISSET(info.masterFD, &readFDs)) {
-      cout << "[EVENTLOOP] Data available on masterFD" << endl;
       char buffer[4096];
       int bytesRead = recv(info.masterFD, buffer, sizeof(buffer), 0);
-      cout << "[EVENTLOOP] Received " << bytesRead << " bytes from master" << endl;
       
       if(bytesRead > 0) {
         buffer[bytesRead] = '\0';
@@ -933,14 +930,9 @@ void eventLoop() {
             }
             
             string cmdStr(buffer + startp, endp - startp);
+            info.replicationOffset = to_string(stoi(info.replicationOffset)+cmdStr.size());
             vector<string> tokens = RESPparser(cmdStr.c_str());
             bool sendResponse = true;
-            
-            cout << "[REPLICA] Received from master: ";
-            for(const auto& t : tokens) {
-              cout << "\"" << t << "\" ";
-            }
-            cout << endl;
             
             string response = "";
             if(!tokens.empty()) {              
@@ -949,8 +941,8 @@ void eventLoop() {
               if(tokens[0] == "REPLCONF" && tokens.size() > 1) {
                 upperCase(tokens[1]);
                 if(tokens[1] == "GETACK") {
-                  response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n";
-                  cout << "[REPLICA] Responding with ACK, response size: " << response.size() << endl;
+                  response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$"+info.replicationOffset.size()
+                  +"\r\n"+info.replicationOffset+"\r\n";
                 }
                 else {
                   sendResponse = false;
@@ -963,8 +955,7 @@ void eventLoop() {
             }
 
             if(sendResponse) {
-              int sent = send(info.masterFD , response.c_str() , response.size() , 0);
-              cout << "[REPLICA] Sent " << sent << " bytes to master" << endl;
+              send(info.masterFD , response.c_str() , response.size() , 0);
             }
             
             pos = endp;
@@ -1241,7 +1232,6 @@ int main(int argc, char **argv) {
     }
   }
   
-  cout << "[MAIN] About to enter eventLoop(), masterFD=" << info.masterFD << endl;
   eventLoop();
   close(info.serverFD);
 
