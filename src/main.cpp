@@ -255,15 +255,21 @@ void readRDB() {
   if(!file.is_open()) return;
 
   vector<char> buffer((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
+  cout << "Buffer size: " << buffer.size() << endl;
   
   size_t idx = 0;
   while(idx < buffer.size() && buffer[idx] != char(0xFE) && buffer[idx] != char(0xFB)) idx++;
   
   while(idx < buffer.size() && buffer[idx] != char(0xFB)) idx++;
-  if(idx >= buffer.size()) return;
+  if(idx >= buffer.size()) {
+    cout << "0xFB not found" << endl;
+    return;
+  }
+  cout << "Found 0xFB at idx: " << idx << endl;
   idx+=3;
   
   while(idx < buffer.size() && buffer[idx] != char(0xFF)) {
+    cout << "Parsing at idx: " << idx << " byte: " << hex << (int)(unsigned char)buffer[idx] << dec << endl;
     int sidx = 0, fidx = 0;
     long long time = 0;
     chrono::steady_clock::time_point expTime;
@@ -289,16 +295,21 @@ void readRDB() {
     }
     
     int keyLen = static_cast<unsigned char>(buffer[idx++]);
+    cout << "Key length: " << keyLen << endl;
     string key = "";
     for(int j=0; j<keyLen; j++) key += buffer[idx++];
+    cout << "Key: " << key << endl;
     
     int valLen = static_cast<unsigned char>(buffer[idx++]);
+    cout << "Val length: " << valLen << endl;
     string val = "";
     for(int j=0; j<valLen; j++) val += buffer[idx++];
+    cout << "Val: " << val << endl;
     
     DATA[key].DATA = val;
     if(time > 0) DATA[key].expiryTime = expTime;
   }
+  cout << "Total keys loaded: " << DATA.size() << endl;
 }
 
 void upperCase(string& str) {
