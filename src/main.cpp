@@ -932,6 +932,12 @@ void eventLoop() {
             vector<string> tokens = RESPparser(cmdStr.c_str());
             bool sendResponse = true;
             
+            cerr << "[REPLICA] Received from master: ";
+            for(const auto& t : tokens) {
+              cerr << "\"" << t << "\" ";
+            }
+            cerr << endl;
+            
             string response = "";
             if(!tokens.empty()) {              
               upperCase(tokens[0]);
@@ -940,6 +946,7 @@ void eventLoop() {
                 upperCase(tokens[1]);
                 if(tokens[1] == "GETACK") {
                   response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n";
+                  cerr << "[REPLICA] Responding with ACK, response size: " << response.size() << endl;
                 }
                 else {
                   sendResponse = false;
@@ -952,7 +959,8 @@ void eventLoop() {
             }
 
             if(sendResponse) {
-              send(info.masterFD , response.c_str() , response.size() , 0);
+              int sent = send(info.masterFD , response.c_str() , response.size() , 0);
+              cerr << "[REPLICA] Sent " << sent << " bytes to master" << endl;
             }
             
             pos = endp;
