@@ -955,9 +955,11 @@ void eventLoop() {
                   response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$"+to_string(info.replicationOffset.size())
                   +"\r\n"+info.replicationOffset+"\r\n";
                   cerr << "[DEBUG] Sending ACK response, offset=" << info.replicationOffset << endl;
+                  info.replicationOffset = to_string(stoi(info.replicationOffset)+cmdStr.size());
                 }
                 else {
                   sendResponse = false;
+                  info.replicationOffset = to_string(stoi(info.replicationOffset)+cmdStr.size());
                 }
               }
               else {
