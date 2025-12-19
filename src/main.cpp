@@ -254,62 +254,63 @@ void readRDB() {
   ifstream file(filePath,ios::binary);
   if(!file.is_open()) return;
 
-  vector<char> buffer((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
-  cout << "Buffer size: " << buffer.size() << endl;
-  
-  size_t idx = 0;
-  while(idx < buffer.size() && buffer[idx] != char(0xFE) && buffer[idx] != char(0xFB)) idx++;
-  
-  while(idx < buffer.size() && buffer[idx] != char(0xFB)) idx++;
-  if(idx >= buffer.size()) {
-    cout << "0xFB not found" << endl;
-    return;
+  char c;
+  vector<string> dataField;
+  string temp = "";
+  bool flag = false;
+  while(file.get(c)) {
+    if(c == char(0xFB)) {
+      flag = true;
+    }
+    else if(c == char(0xFF)) {
+      dataField.push_back(temp);
+      temp = "";
+      break;
+    }
+    else if(c == char(0xFE)) {
+      if(flag && temp.length() > 0) {
+        dataField.push_back(temp);
+        temp = "";
+      }
+    }
+    else if(flag){
+      temp += c;
+    }
   }
-  cout << "Found 0xFB at idx: " << idx << endl;
-  idx+=3;
-  
-  while(idx < buffer.size() && buffer[idx] != char(0xFF)) {
-    cout << "Parsing at idx: " << idx << " byte: " << hex << (int)(unsigned char)buffer[idx] << dec << endl;
-    int sidx = 0, fidx = 0;
+
+  for(int i=0 ;i<dataField.size() ;i++) {
+    int sidx=0 , fidx=0;
     long long time = 0;
     chrono::steady_clock::time_point expTime;
-    
-    if(buffer[idx] == char(0xFC)) {
-      idx++; 
-      for(int j=0; j<8; j++) {
-        time |= (static_cast<long long>(static_cast<unsigned char>(buffer[idx++])) << (j*8));
+    if(dataField[i][0] == 0xFC) {
+      for(int j=1 ;j<=8 ;j++) {
+        time |= (static_cast<long long>(static_cast<unsigned char>(dataField[i][j])) << ((j-1)*8));
       }
+      sidx = 11 , fidx = sidx + static_cast<int>(static_cast<unsigned char>(dataField[i][10]));
       expTime = chrono::steady_clock::now()+chrono::milliseconds(time);
-      idx++; 
     }
-    else if(buffer[idx] == char(0xFD)) {
-      idx++;
-      for(int j=0; j<4; j++) {
-        time |= (static_cast<long long>(static_cast<unsigned char>(buffer[idx++])) << (j*8));
+    else if(dataField[i][0] == 0xFD) {
+      for(int j=1 ;j<=4 ;j++) {
+        time |= (static_cast<long long>(static_cast<unsigned char>(dataField[i][j])) << ((j-1)*8));
       }
+      sidx = 7 , fidx = sidx + static_cast<int>(static_cast<unsigned char>(dataField[i][6]));
       expTime = chrono::steady_clock::now()+chrono::seconds(time);
-      idx++; 
     }
     else {
-      idx++;
+      sidx = 4 , fidx = sidx + static_cast<int>(static_cast<unsigned char>(dataField[i][3]));
     }
-    
-    int keyLen = static_cast<unsigned char>(buffer[idx++]);
-    cout << "Key length: " << keyLen << endl;
+
     string key = "";
-    for(int j=0; j<keyLen; j++) key += buffer[idx++];
-    cout << "Key: " << key << endl;
+    for(int j=sidx ;j<fidx ;j++) key+=dataField[i][j];
+    sidx = 1+fidx;
+    fidx = fidx + static_cast<int>(static_cast<unsigned char>(dataField[i][fidx]));
     
-    int valLen = static_cast<unsigned char>(buffer[idx++]);
-    cout << "Val length: " << valLen << endl;
     string val = "";
-    for(int j=0; j<valLen; j++) val += buffer[idx++];
-    cout << "Val: " << val << endl;
-    
+    for(int j=sidx ;j<fidx ;j++) val+=dataField[i][j];
+
     DATA[key].DATA = val;
-    if(time > 0) DATA[key].expiryTime = expTime;
+    DATA[key].expiryTime = expTime;
   }
-  cout << "Total keys loaded: " << DATA.size() << endl;
 }
 
 void upperCase(string& str) {
@@ -1416,6 +1417,7 @@ int main(int argc, char **argv) {
     }
   }
   
+  readRDB();
   eventLoop();
   close(info.serverFD);
 
