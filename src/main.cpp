@@ -930,7 +930,7 @@ void eventLoop() {
             
             string cmdStr(buffer + startp, endp - startp);
             vector<string> tokens = RESPparser(cmdStr.c_str());
-            bool sendResponse = false;
+            bool sendResponse = true;
             
             string response = "";
             if(!tokens.empty()) {              
@@ -940,15 +940,18 @@ void eventLoop() {
                 upperCase(tokens[1]);
                 if(tokens[1] == "GETACK") {
                   response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n";
-                  sendResponse = true;
+                }
+                else {
+                  sendResponse = false;
                 }
               }
               else {
+                sendResponse = false;
                 response = generateResponse(tokens, sendResponse, info.masterFD);
               }
             }
 
-            if(sendResponse && !response.empty()) {
+            if(sendResponse) {
               send(info.masterFD , response.c_str() , response.size() , 0);
             }
             
@@ -1023,19 +1026,7 @@ void eventLoop() {
          response = handleINFO(isREP);
         }
         else if(tokens[0] == "REPLCONF") {
-          bool isACK = false;
-          try {
-            upperCase(tokens[1]);
-            if(tokens[1] == "GETACK") {
-              isACK = true;
-              response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n";
-            }
-          }
-          catch(...) {
-
-          }
-
-          if(!isACK) response = encodeRESPsimpleSTR("OK");
+          response = encodeRESPsimpleSTR("OK");
         }
         else if(tokens[0] == "PSYNC") {
           response = encodeRESPsimpleSTR("FULLRESYNC " + info.replicationID + " " +
