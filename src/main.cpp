@@ -260,16 +260,10 @@ void readRDB() {
   bool flag = false , header = true;
   while(file.get(c)) {
     if(c == 0xFB) {
-      if(!header) {
-        flag = !flag;
-        if(!flag) {
-          dataField.push_back(temp);
-          temp = "";
-        }
-      }
-      else {
+      flag = !flag;
+      if(!flag) {
+        dataField.push_back(temp);
         temp = "";
-        header = false;
       }
     }
     else if(c == 0xFF) {
@@ -277,7 +271,7 @@ void readRDB() {
       temp = "";
       break;
     }
-    else {
+    else if(flag){
       temp += c;
     }
   }
