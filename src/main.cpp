@@ -943,11 +943,12 @@ void eventLoop() {
                 if(tokens[1] == "GETACK") {
                   response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$"+to_string(info.replicationOffset.size())
                   +"\r\n"+info.replicationOffset+"\r\n";
+                  info.replicationOffset = to_string(stoi(info.replicationOffset)+cmdStr.size());
                 }
                 else {
                   sendResponse = false;
+                  info.replicationOffset = to_string(stoi(info.replicationOffset)+cmdStr.size());
                 }
-                info.replicationOffset = to_string(stoi(info.replicationOffset)+cmdStr.size());
               }
               else {
                 sendResponse = false;
@@ -1230,14 +1231,9 @@ int main(int argc, char **argv) {
       handshake = "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n";
       send(info.masterFD, handshake.c_str(), handshake.size(), 0);
       
-      bytesRead = recv(info.masterFD, buffer, sizeof(buffer), 0);
-      if(bytesRead > 0) {
-        buffer[bytesRead] = '\0';
-      }
+      int flags = fcntl(info.masterFD, F_GETFL, 0);
+      fcntl(info.masterFD, F_SETFL, flags | O_NONBLOCK);
     }
-    
-    int flags = fcntl(info.masterFD, F_GETFL, 0);
-    fcntl(info.masterFD, F_SETFL, flags | O_NONBLOCK);
   }
   
   eventLoop();
