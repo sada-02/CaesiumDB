@@ -837,6 +837,7 @@ string handleINFO(bool isREP=true) {
 }
 
 void eventLoop() {
+  cout << "[EVENTLOOP] Starting event loop, masterFD=" << info.masterFD << ", serverFD=" << info.serverFD << endl;
   while(true) {
     fd_set readFDs;
     FD_ZERO(&readFDs);
@@ -846,6 +847,7 @@ void eventLoop() {
     if(info.masterFD >= 0) {
       FD_SET(info.masterFD, &readFDs);
       maxFD = max(maxFD, info.masterFD);
+      cout << "[EVENTLOOP] Monitoring masterFD=" << info.masterFD << endl;
     }
 
     for(int id : clients) {
@@ -895,8 +897,10 @@ void eventLoop() {
     checkBlockedTimeouts();
 
     if(info.masterFD >= 0 && FD_ISSET(info.masterFD, &readFDs)) {
+      cout << "[EVENTLOOP] Data available on masterFD" << endl;
       char buffer[4096];
       int bytesRead = recv(info.masterFD, buffer, sizeof(buffer), 0);
+      cout << "[EVENTLOOP] Received " << bytesRead << " bytes from master" << endl;
       
       if(bytesRead > 0) {
         buffer[bytesRead] = '\0';
@@ -932,11 +936,11 @@ void eventLoop() {
             vector<string> tokens = RESPparser(cmdStr.c_str());
             bool sendResponse = true;
             
-            cerr << "[REPLICA] Received from master: ";
+            cout << "[REPLICA] Received from master: ";
             for(const auto& t : tokens) {
-              cerr << "\"" << t << "\" ";
+              cout << "\"" << t << "\" ";
             }
-            cerr << endl;
+            cout << endl;
             
             string response = "";
             if(!tokens.empty()) {              
@@ -946,7 +950,7 @@ void eventLoop() {
                 upperCase(tokens[1]);
                 if(tokens[1] == "GETACK") {
                   response = "*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n";
-                  cerr << "[REPLICA] Responding with ACK, response size: " << response.size() << endl;
+                  cout << "[REPLICA] Responding with ACK, response size: " << response.size() << endl;
                 }
                 else {
                   sendResponse = false;
@@ -960,7 +964,7 @@ void eventLoop() {
 
             if(sendResponse) {
               int sent = send(info.masterFD , response.c_str() , response.size() , 0);
-              cerr << "[REPLICA] Sent " << sent << " bytes to master" << endl;
+              cout << "[REPLICA] Sent " << sent << " bytes to master" << endl;
             }
             
             pos = endp;
