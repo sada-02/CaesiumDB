@@ -838,6 +838,7 @@ string handleINFO(bool isREP=true) {
 }
 
 void eventLoop() {
+  cerr << "[EVENTLOOP] Starting, masterFD=" << info.masterFD << ", serverFD=" << info.serverFD << endl;
   while(true) {
     fd_set readFDs;
     FD_ZERO(&readFDs);
@@ -847,6 +848,7 @@ void eventLoop() {
     if(info.masterFD >= 0) {
       FD_SET(info.masterFD, &readFDs);
       maxFD = max(maxFD, info.masterFD);
+      cerr << "[EVENTLOOP] Monitoring masterFD=" << info.masterFD << endl;
     }
 
     for(int id : clients) {
@@ -896,8 +898,10 @@ void eventLoop() {
     checkBlockedTimeouts();
 
     if(info.masterFD >= 0 && FD_ISSET(info.masterFD, &readFDs)) {
+      cerr << "[EVENTLOOP] Data available on masterFD" << endl;
       char buffer[4096];
       int bytesRead = recv(info.masterFD, buffer, sizeof(buffer), 0);
+      cerr << "[EVENTLOOP] Received " << bytesRead << " bytes" << endl;
       
       if(bytesRead > 0) {
         buffer[bytesRead] = '\0';
@@ -1243,6 +1247,7 @@ int main(int argc, char **argv) {
     }
   }
   
+  cerr << "[MAIN] About to enter eventLoop, masterFD=" << info.masterFD << endl;
   eventLoop();
   close(info.serverFD);
 
