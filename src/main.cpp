@@ -274,7 +274,10 @@ void readRDB() {
       for(int j=0; j<8; j++) {
         time |= (static_cast<long long>(static_cast<unsigned char>(buffer[idx++])) << (j*8));
       }
-      expTime = chrono::steady_clock::now()+chrono::milliseconds(time);
+      auto epoch = chrono::system_clock::from_time_t(0);
+      auto duration = chrono::milliseconds(time);
+      auto sys_time = epoch + duration;
+      expTime = chrono::steady_clock::now() + chrono::duration_cast<chrono::steady_clock::duration>(sys_time - chrono::system_clock::now());
       idx++; 
     }
     else if(buffer[idx] == char(0xFD)) {
@@ -282,7 +285,10 @@ void readRDB() {
       for(int j=0; j<4; j++) {
         time |= (static_cast<long long>(static_cast<unsigned char>(buffer[idx++])) << (j*8));
       }
-      expTime = chrono::steady_clock::now()+chrono::seconds(time);
+      auto epoch = chrono::system_clock::from_time_t(0);
+      auto duration = chrono::seconds(time);
+      auto sys_time = epoch + duration;
+      expTime = chrono::steady_clock::now() + chrono::duration_cast<chrono::steady_clock::duration>(sys_time - chrono::system_clock::now());
       idx++; 
     }
     else {
