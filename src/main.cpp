@@ -715,6 +715,16 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
     }
     else if(tokens[0] == "PUBLISH") {
       response = encodeRESPint(clientChannels[tokens[1]].size());
+      vector<string> msg;
+      msg.push_back("GARBAGE");
+      msg.push_back("message");
+      msg.push_back(tokens[1]);
+      msg.push_back(tokens[2]);
+
+      string message = encodeRESP(msg,true);
+      for(int c : clientChannels[tokens[1]]) {
+        send(c,message.c_str(),message.size(),0);
+      }
     }
     else {
       response = encodeRESPsimpleERR("ERR Can't execute \'"+ tokens[0] +"\': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context");
@@ -954,6 +964,16 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
     }
     else if(tokens[0] == "PUBLISH") {
       response = encodeRESPint(clientChannels[tokens[1]].size());
+      vector<string> msg;
+      msg.push_back("GARBAGE");
+      msg.push_back("message");
+      msg.push_back(tokens[1]);
+      msg.push_back(tokens[2]);
+
+      string message = encodeRESP(msg,true);
+      for(int c : clientChannels[tokens[1]]) {
+        send(c,message.c_str(),message.size(),0);
+      }
     }
   }
 
