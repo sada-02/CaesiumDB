@@ -53,10 +53,3 @@ Coordinates decode(uint64_t geo_code) {
     
     return convert_grid_numbers_to_coordinates(grid_latitude_number, grid_longitude_number);
 }
-
-struct TestCase {
-    std::string name;
-    double expected_latitude;
-    double expected_longitude;
-    uint64_t score;
-};

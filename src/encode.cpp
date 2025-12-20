@@ -40,10 +40,3 @@ uint64_t encode(double latitude, double longitude) {
 
     return interleave(lat_int, lon_int);
 }
-
-struct TestCase {
-    std::string name;
-    double latitude;
-    double longitude;
-    uint64_t expected_score;
-};
