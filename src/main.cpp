@@ -1132,16 +1132,25 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
       }
     }
     else if(tokens[0] == "GEOPOS") {
-      Coordinates curr = decode(uint64_t(SortedSet[tokens[1]][tokens[2]]));
-      vector<string> temp;
-      temp.push_back("GARBAGE");
-      stringstream ss;
-      ss << setprecision(17) << curr.longitude;
-      temp.push_back(ss.str());
-      ss.clear();
-      ss << setprecision(17) << curr.latitude;
-      temp.push_back(ss.str());
-      response = encodeRESP(temp,true);
+      response = "*"+to_string(tokens.size()-2)+"\r\n";
+      for(int i=2 ;i<tokens.size() ;i++) {
+        if(SortedSet.find(tokens[1]) == SortedSet.end() || 
+      SortedSet[tokens[1]].find(tokens[2]) == SortedSet[tokens[1]].end()) {
+          response+="*-1\r\n";
+        }
+        else {
+          vector<string> temp;
+          Coordinates curr = decode(uint64_t(SortedSet[tokens[1]][tokens[2]]));
+          temp.push_back("GARBAGE");
+          stringstream ss;
+          ss << setprecision(17) << curr.longitude;
+          temp.push_back(ss.str());
+          ss.clear();
+          ss << setprecision(17) << curr.latitude;
+          temp.push_back(ss.str());
+          response += encodeRESP(temp,true);
+        }
+      }
     }
   }
 
