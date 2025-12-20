@@ -8,6 +8,8 @@
 #include <set>
 #include <fstream>
 #include <filesystem>
+#include <sstream>
+#include <iomanip>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -1085,7 +1087,9 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         else {
           vector<string> temp;
           temp.push_back("GARBAGE");
-          temp.push_back(to_string(SortedSet[tokens[1]][tokens[2]]));
+          stringstream ss;
+          ss << setprecision(17) << SortedSet[tokens[1]][tokens[2]];
+          temp.push_back(ss.str());
           response = encodeRESP(temp,false);
         }
       }
