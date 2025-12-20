@@ -1033,6 +1033,38 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         response = "$-1\r\n";
       }
     }
+    else if(tokens[0] == "ZRANGE") {
+      int sidx = stoi(tokens[2]) , eidx = stoi(tokens[3]);
+      if(SortedSet.find(tokens[1]) == SortedSet.end()) {
+        response = "*0\r\n";
+      }
+      else {
+        if(sidx<0 && abs(sidx)>SortedSet[tokens[1]].size()) sidx = 0;
+        if(eidx<0 && abs(eidx)>SortedSet[tokens[1]].size()) eidx = 0;
+
+        if(sidx>edx || sidx>=SortedSet[tokens[1]].size()) {
+          response = "*0\r\n";
+        }
+        else {
+          if(eidx>=SortedSet[tokens[1]].size()) eidx = SortedSet[tokens[1]].size()-1;
+
+          vector<pair<double,string>> temp;
+          for(const auto& c : SortedSet[tokens[1]]) {
+            temp.push_back({c.second,c.first});
+          }
+
+          sort(temp.begin(), temp.end());
+
+          vector<string> vals;
+          vals.push_back("GARBAGE");
+          for(int i=sidx ;i<=eidx ;i++) {
+            vals.push_back(temp[i]);
+          }
+
+          response = encodeRESP(vals,true);
+        }
+      }
+    }
   }
 
   return response;
