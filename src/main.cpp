@@ -1042,7 +1042,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         if(sidx<0 && abs(sidx)>SortedSet[tokens[1]].size()) sidx = 0;
         if(eidx<0 && abs(eidx)>SortedSet[tokens[1]].size()) eidx = 0;
 
-        if(sidx>edx || sidx>=SortedSet[tokens[1]].size()) {
+        if(sidx>eidx || sidx>=SortedSet[tokens[1]].size()) {
           response = "*0\r\n";
         }
         else {
@@ -1058,7 +1058,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
           vector<string> vals;
           vals.push_back("GARBAGE");
           for(int i=sidx ;i<=eidx ;i++) {
-            vals.push_back(temp[i]);
+            vals.push_back(temp[i].second);
           }
 
           response = encodeRESP(vals,true);
