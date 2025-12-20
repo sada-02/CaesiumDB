@@ -1222,7 +1222,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         response = "$"+to_string(role.size())+"\r\n"+role+"\r\n";
       }
       else if(tokens[1] == "GETUSER"){
-        response = "*2\r\n$5\r\nflags\r\n*0\r\n"
+        response = "*2\r\n$5\r\nflags\r\n*0\r\n";
       }
       
     }
