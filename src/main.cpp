@@ -202,6 +202,7 @@ struct channelHandler{
 struct authInfo{
   set<string> flag;
   set<string> passwords;
+  set<int> users;
 };
 
 map<string,metaData> DATA;
@@ -1244,44 +1245,50 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
     }
     else if(tokens[0] == "ACL") {
       upperCase(tokens[1]);
-      if(tokens[1] == "WHOAMI") {
-        response = "$"+to_string((*userInfo.begin()).first.size())+"\r\n"+(*userInfo.begin()).first+"\r\n";
+      if(userInfo["default"].users.find(currFD) != userInfo["default"].users.end()) {
+        if(tokens[1] == "WHOAMI") {
+          response = "$"+to_string((*userInfo.begin()).first.size())+"\r\n"+(*userInfo.begin()).first+"\r\n";
+        }
+        else if(tokens[1] == "GETUSER"){
+          response = "*4\r\n$5\r\nflags\r\n";
+          vector<string> temp;
+          temp.push_back("GARBAGE");
+
+          if(userInfo["default"].passwords.size() == 0) {
+            userInfo["default"].flag.insert("nopass");
+            temp.push_back("nopass");
+          }
+          else {
+            if(userInfo["default"].flag.find("nopass") != userInfo["default"].flag.end()) userInfo["default"].flag.erase("nopass"); 
+          }
+
+          response += encodeRESP(temp,true);
+          response += "$9\r\npasswords\r\n";
+          temp.clear();
+          temp.push_back("GARBAGE");
+          for(const string& str : userInfo["default"].passwords) {
+            temp.push_back(str);
+          }
+          response += encodeRESP(temp,true);
+        }
+        else if(tokens[1] == "SETUSER"){
+          if(tokens.size() > 3) {
+            string passwd = tokens[3].substr(1);
+            userInfo["default"].passwords.insert(SHA256(passwd));
+          }
+
+          response = encodeRESPsimpleSTR("OK");
+        }
       }
-      else if(tokens[1] == "GETUSER"){
-        response = "*4\r\n$5\r\nflags\r\n";
-        vector<string> temp;
-        temp.push_back("GARBAGE");
-
-        if(userInfo["default"].passwords.size() == 0) {
-          userInfo["default"].flag.insert("nopass");
-          temp.push_back("nopass");
-        }
-        else {
-          if(userInfo["default"].flag.find("nopass") != userInfo["default"].flag.end()) userInfo["default"].flag.erase("nopass"); 
-        }
-
-        response += encodeRESP(temp,true);
-        response += "$9\r\npasswords\r\n";
-        temp.clear();
-        temp.push_back("GARBAGE");
-        for(const string& str : userInfo["default"].passwords) {
-          temp.push_back(str);
-        }
-        response += encodeRESP(temp,true);
-      }
-      else if(tokens[1] == "SETUSER"){
-        if(tokens.size() > 3) {
-          string passwd = tokens[3].substr(1);
-          userInfo["default"].passwords.insert(SHA256(passwd));
-        }
-
-        response = encodeRESPsimpleSTR("OK");
+      else {
+        response = encodeRESPsimpleERR("NOAUTH Authentication required.");
       }
     }
     else if(tokens[0] == "AUTH") {
       string hashedPassword = SHA256(tokens[2]);
       if(userInfo["default"].passwords.find(hashedPassword) != userInfo["default"].passwords.end()) {
         response = encodeRESPsimpleSTR("OK");
+        userInfo["default"].users.insert(currFD);
       }
       else {
         response = encodeRESPsimpleERR("WRONGPASS invalid username-password pair or user is disabled.");
