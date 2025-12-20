@@ -1132,7 +1132,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
       }
     }
     else if(tokens[0] == "GEOPOS") {
-      Coordinates curr = decode(uint64_t(SetScore[tokens[1]][tokens[2]]));
+      Coordinates curr = decode(uint64_t(SortedSet[tokens[1]][tokens[2]]));
       vector<string> temp;
       temp.push_back("GARBAGE");
       stringstream ss;
