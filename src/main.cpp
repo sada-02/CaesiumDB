@@ -1195,6 +1195,26 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         response = encodeRESP(temp);
       }
     }
+    else if(tokens[0] == "GEOSEARCH") {
+      double clon = stod(tokens[3]) , clat = stod(tokens[4]) , radius = stod(tokens[6]);
+      if(SortedSet.find(tokens[1]) == SortedSet.end()) {
+        response = "*-1\r\n";
+      }
+      else {
+        vector<string> temp;
+        temp.push_back("GARBAGE");
+        for(const auto& p : SortedSet[tokens[1]]) {
+          Coordinates pos = decode(uint64_t(p.second));
+          double dist = geohashGetDistance(pos.longitude,pos.latitude,clon,clat);
+
+          if(dist <= radius) {
+            temp.push_back(p.first);
+          }
+        }
+
+        response = encodeRESP(temp,true);
+      }
+    }
   }
 
   return response;
