@@ -314,6 +314,11 @@ void upperCase(string& str) {
   return;
 }
 
+void lowerCase(string& str) {
+  transform(str.begin(), str.end(), str.begin(),[](unsigned char c){ return std::tolower(c);});
+  return;
+}
+
 void handleSET(vector<string>& tokens) {
   DATA[tokens[1]].DATA = tokens[2];
   if(tokens.size()>3) {
@@ -902,6 +907,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
   }
   else if(tokens[0] == "SUBSCRIBE") {
     response = "*"+to_string(int(tokens.size())+1)+"\r\n";
+    lowerCase(tokens[0]);
     
     for(int i=0 ;i<tokens.size() ;i++) {
       response+="$"+to_string(int(tokens[i].size()))+"\r\n"+tokens[i]+"\r\n";
