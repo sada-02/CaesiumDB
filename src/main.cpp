@@ -711,7 +711,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
       inSubsribeMode = true;
     }
     else {
-      response = encodeRESPsimpleERR("ERR Can't execute 'set': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context");
+      response = encodeRESPsimpleERR("ERR Can't execute \'"+ tokens[0] +"\': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context");
     }
   }
   else {
