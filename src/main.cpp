@@ -1075,7 +1075,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
       int size = 0;
       if(SortedSet.find(tokens[1]) != SortedSet.end()) size = SortedSet[tokens[1]].size();
       response = encodeRESPint(size);
-    }
+      }
     else if(tokens[0] == "ZSCORE") {
       if(SortedSet.find(tokens[1]) == SortedSet.end()) {
         response = "$-1\r\n";
@@ -1093,6 +1093,21 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
           response = encodeRESP(temp,false);
         }
       }
+    }
+    else if(tokens[0] == "ZREM") {
+      if(SortedSet.find(tokens[1]) == SortedSet.end()) {
+        response = encodeRESPint(0);
+      }
+      else {
+        if(SortedSet[tokens[1]].find(tokens[2]) == SortedSet[tokens[1]].end()) {
+          response = encodeRESPint(0);
+        }
+        else {
+          SetScore.erase(SortedSet[tokens[1]][tokens[2]]);
+          SortedSet[tokens[1]].erase(tokens[2]);
+          response = encodeRESPint(1);
+        }
+      }      
     }
   }
 
