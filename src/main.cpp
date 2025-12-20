@@ -1251,6 +1251,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         response = "*4\r\n$5\r\nflags\r\n";
         vector<string> temp;
         temp.push_back("GARBAGE");
+
         if(userInfo["default"].passwords.size() == 0) {
           userInfo["default"].flag.insert("nopass");
           temp.push_back("nopass");
@@ -1258,7 +1259,9 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         else {
           if(userInfo["default"].flag.find("nopass") != userInfo["default"].flag.end()) userInfo["default"].flag.erase("nopass"); 
         }
+
         response += encodeRESP(temp,true);
+        response += "$9\r\npasswords\r\n";
         temp.clear();
         temp.push_back("GARBAGE");
         for(const string& str : userInfo["default"].passwords) {
