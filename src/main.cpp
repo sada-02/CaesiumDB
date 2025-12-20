@@ -1074,6 +1074,22 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
       if(SortedSet.find(tokens[1]) != SortedSet.end()) size = SortedSet[tokens[1]].size();
       response = encodeRESPint(size);
     }
+    else if(tokens[0] == "ZSCORE") {
+      if(SortedSet.find(tokens[1]) == SortedSet.end()) {
+        response = "$-1\r\n";
+      }
+      else {
+        if(SortedSet[tokens[1]].find(tokens[2]) == SortedSet[tokens[1]].end()) {
+          response = "$-1\r\n";
+        }
+        else {
+          vector<string> temp;
+          temp.push_back("GARBAGE");
+          temp.push_back(to_string(SortedSet[tokens[1]][tokens[2]]));
+          response = encodeRESP(temp,false);
+        }
+      }
+    }
   }
 
   return response;
