@@ -695,7 +695,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
   string response = "";
   if(inSubsribeMode) {
     if(tokens[0] == "PING") {
-      response = "+PONG\r\n";
+      response = "*2\r\n$4\r\npong\r\n$0\r\n\r\n";
     }
     else if(tokens[0] == "SUBSCRIBE") {
       response = "*"+to_string(int(tokens.size())+1)+"\r\n";
