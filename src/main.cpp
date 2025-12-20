@@ -1245,7 +1245,14 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
     }
     else if(tokens[0] == "ACL") {
       upperCase(tokens[1]);
-      if(userInfo["default"].users.find(currFD) != userInfo["default"].users.end()) {
+      if(tokens[1] == "SETUSER"){
+        if(tokens.size() > 3) {
+          string passwd = tokens[3].substr(1);
+          userInfo["default"].passwords.insert(SHA256(passwd));
+        }
+        response = encodeRESPsimpleSTR("OK");
+      }
+      else if(userInfo["default"].passwords.size() == 0 || userInfo["default"].users.find(currFD) != userInfo["default"].users.end()) {
         if(tokens[1] == "WHOAMI") {
           response = "$"+to_string((*userInfo.begin()).first.size())+"\r\n"+(*userInfo.begin()).first+"\r\n";
         }
@@ -1270,14 +1277,6 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
             temp.push_back(str);
           }
           response += encodeRESP(temp,true);
-        }
-        else if(tokens[1] == "SETUSER"){
-          if(tokens.size() > 3) {
-            string passwd = tokens[3].substr(1);
-            userInfo["default"].passwords.insert(SHA256(passwd));
-          }
-
-          response = encodeRESPsimpleSTR("OK");
         }
       }
       else {
