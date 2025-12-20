@@ -1109,6 +1109,9 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         }
       }      
     }
+    else if(tokens[0] == "GEOADD") {
+      response = encodeRESPint(1);
+    }
   }
 
   return response;
