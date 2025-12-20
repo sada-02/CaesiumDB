@@ -20,10 +20,13 @@
 #include <optional>
 #include <climits>
 #include <cstdint>
+#include <cmath>
 #include "encode.h"
 #include "decode.h"
 using namespace std;
 namespace fs = filesystem;
+
+const double EARTH_RADIUS_IN_METERS = 6372797.560856;
 
 vector<int> clients;
 set<int> replicas; 
@@ -699,6 +702,12 @@ void propagateToReplicas(const vector<string>& tokens) {
   info.replicationOffset = to_string(stoll(info.replicationOffset) + command.size());
 }
 
+static inline double deg_rad(double ang) { return ang * D_R; }
+
+double geohashGetLatDistance(double lat1d, double lat2d) {
+    return EARTH_RADIUS_IN_METERS * fabs(deg_rad(lat2d) - deg_rad(lat1d));
+}
+
 double geohashGetDistance(double lon1d, double lat1d, double lon2d, double lat2d) {
     double lat1r, lon1r, lat2r, lon2r, u, v, a;
     lon1r = deg_rad(lon1d);
@@ -1176,7 +1185,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         response = "$-1\r\n";
       }
       else {
-        Coordinates pos1 = decode(uint64_t(Sorted[tokens[1]][tokens[2]])) , pos2 = decode(uint64_t(Sorted[tokens[1]][tokens[3]])) ;
+        Coordinates pos1 = decode(uint64_t(SortedSet[tokens[1]][tokens[2]])) , pos2 = decode(uint64_t(SortedSet[tokens[1]][tokens[3]]));
         double dist = geohashGetDistance(pos1.longitude,pos1.latitude,pos2.longitude,pos2.latitude);
         vector<string> temp ;
         temp.push_back("GARBAGE");
