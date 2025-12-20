@@ -1217,7 +1217,14 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
     }
     else if(tokens[0] == "ACL") {
       string role = "default";
-      response = "$"+to_string(role.size())+"\r\n"+role+"\r\n";
+      upperCase(tokens[1]);
+      if(tokens[1] == "WHOAMI") {
+        response = "$"+to_string(role.size())+"\r\n"+role+"\r\n";
+      }
+      else if(tokens[1] == "GETUSER"){
+        response = "*2\r\n$5\r\nflags\r\n*0\r\n"
+      }
+      
     }
   }
 
