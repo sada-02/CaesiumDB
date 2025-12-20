@@ -194,6 +194,7 @@ map<string,StreamList> STREAM;
 InfoServer info;
 map<int,channelHandler> channels;
 map<string,set<int>> clientChannels;
+map<string,map<double,string>> SortedSet;
 
 vector<string> RESPparser(const char* str) {
   int n = strlen(str);
@@ -1004,6 +1005,11 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
 
       response += encodeRESPint(channels[currFD].connectedChannels.size());
       if(channels[currFD].connectedChannels.size() == 0) channels[currFD].inSubsribeMode = false;
+    }
+    else if(tokens[0] == "ZADD") {
+      double score = stod(tokens[2]);
+      SortedSet[tokens[1]][score] = tokens[3];
+      response = encodeRESPint(1);
     }
   }
 
