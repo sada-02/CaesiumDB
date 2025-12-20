@@ -903,7 +903,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
   else if(tokens[0] == "SUBSCRIBE") {
     response = "*"+to_string(int(tokens.size())+1)+"\r\n";
     
-    for(int i=1 ;i<tokens.size() ;i++) {
+    for(int i=0 ;i<tokens.size() ;i++) {
       response+="$"+to_string(int(tokens[i].size()))+"\r\n"+tokens[i]+"\r\n";
     }
 
