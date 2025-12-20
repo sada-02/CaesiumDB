@@ -711,7 +711,7 @@ string SHA256(string& data) {
       ss << hex << setw(2) << setfill('0') << static_cast<int>(hash[i]);
   }
   
-  return ss.str()
+  return ss.str();
 }
 
 void propagateToReplicas(const vector<string>& tokens) {
@@ -1252,23 +1252,24 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         vector<string> temp;
         temp.push_back("GARBAGE");
         if(userInfo["default"].passwords.size() == 0) {
-          flags.insert("nopass");
+          userInfo["default"].flag.insert("nopass");
           temp.push_back("nopass");
         }
         else {
-          if(flags.find("nopass") != flags.end()) flags.erase("nopass"); 
+          if(userInfo["default"].flag.find("nopass") != userInfo["default"].flag.end()) userInfo["default"].flag.erase("nopass"); 
         }
         response += encodeRESP(temp,true);
         temp.clear();
         temp.push_back("GARBAGE");
-        for(string& str : userInfo["default"].passwords) {
+        for(const string& str : userInfo["default"].passwords) {
           temp.push_back(str);
         }
         response += encodeRESP(temp,true);
       }
       else if(tokens[1] == "SETUSER"){
         if(tokens.size() > 3) {
-          userInfo["default"].passwords.insert(SHA256(tokens[4].substr(1,tokens.size()-1)));
+          string passwd = tokens[4].substr(1,tokens.size()-1);
+          userInfo["default"].passwords.insert(SHA256(passwd));
         }
 
         response = encodeRESPsimpleSTR("OK");
