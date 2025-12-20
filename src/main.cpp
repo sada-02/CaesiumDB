@@ -1039,8 +1039,12 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         response = "*0\r\n";
       }
       else {
-        if(sidx<0 && abs(sidx)>SortedSet[tokens[1]].size()) sidx = 0;
-        if(eidx<0 && abs(eidx)>SortedSet[tokens[1]].size()) eidx = 0;
+        if(sidx<0 ) {
+          sidx = max(0,abs(sidx)>SortedSet[tokens[1]].size()+sidx);
+        }
+        if(eidx<0) {
+          eidx = max(0,SortedSet[tokens[1]].size()+eidx);
+        }
 
         if(sidx>eidx || sidx>=SortedSet[tokens[1]].size()) {
           response = "*0\r\n";
