@@ -197,7 +197,7 @@ InfoServer info;
 map<int,channelHandler> channels;
 map<string,set<int>> clientChannels;
 map<string,map<string,double>> SortedSet;
-map<double,string> SetScore;
+map<string,map<double,string>> SetScore;
 
 vector<string> RESPparser(const char* str) {
   int n = strlen(str);
@@ -1019,9 +1019,9 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
     else if(tokens[0] == "ZADD") {
       double score = stod(tokens[2]);
       response = encodeRESPint(SortedSet[tokens[1]].find(tokens[3]) != SortedSet[tokens[1]].end() ? 0 : 1);
-      if(SortedSet[tokens[1]].find(tokens[3]) != SortedSet[tokens[1]].end()) SetScore.erase(SortedSet[tokens[1]][tokens[3]]);
+      if(SortedSet[tokens[1]].find(tokens[3]) != SortedSet[tokens[1]].end()) SetScore[tokens[1]].erase(SortedSet[tokens[1]][tokens[3]]);
       SortedSet[tokens[1]][tokens[3]] = score;
-      SetScore[score] = tokens[3];
+      SetScore[tokens[1]][score] = tokens[3];
     }
     else if(tokens[0] == "ZRANK") {
       vector<pair<double,string>> temp;
@@ -1110,7 +1110,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
           response = encodeRESPint(0);
         }
         else {
-          SetScore.erase(SortedSet[tokens[1]][tokens[2]]);
+          SetScore[tokens[1]].erase(SortedSet[tokens[1]][tokens[2]]);
           SortedSet[tokens[1]].erase(tokens[2]);
           response = encodeRESPint(1);
         }
@@ -1122,8 +1122,8 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         response = encodeRESPsimpleERR("ERR invalid longitude,latitude pair "+to_string(longitude)+","+to_string(latitude));
       }
       else {
-        SortedSet[tokens[2]][tokens[4]] = 0;
-        SetScore[0] = tokens[4];
+        SortedSet[tokens[1]][tokens[4]] = 0;
+        SetScore[tokens[1]][0] = tokens[4];
         response = encodeRESPint(1);
       }
     }
