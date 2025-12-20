@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <openssl/sha.h>
 #include <netdb.h>
 #include <fcntl.h>
 #include <chrono>
@@ -198,6 +199,11 @@ struct channelHandler{
   bool inSubsribeMode = false;
 };
 
+struct authInfo{
+  set<string> flag;
+  set<string> passwords;
+};
+
 map<string,metaData> DATA;
 map<string,List> LISTS;
 map<string,StreamList> STREAM;
@@ -206,6 +212,7 @@ map<int,channelHandler> channels;
 map<string,set<int>> clientChannels;
 map<string,map<string,double>> SortedSet;
 map<string,map<double,string>> SetScore;
+map<string,authInfo> userInfo;
 
 vector<string> RESPparser(const char* str) {
   int n = strlen(str);
@@ -685,6 +692,26 @@ string handleTYPE(const vector<string>& tokens) {
   else {
     return encodeRESPsimpleSTR("none");
   }
+}
+
+void calculate_sha256(const string& input, unsigned char* output_buffer) {
+    SHA256_CTX sha256_context;
+    SHA256_Init(&sha256_context);
+    SHA256_Update(&sha256_context, input.c_str(), input.length());
+    SHA256_Final(output_buffer, &sha256_context);
+}
+
+string SHA256(string& data) {
+  unsigned char hash[SHA256_DIGEST_LENGTH]; 
+
+  calculate_sha256(data, hash);
+
+  stringstream ss;
+  for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
+      ss << hex << setw(2) << setfill('0') << static_cast<int>(hash[i]);
+  }
+  
+  return ss.str()
 }
 
 void propagateToReplicas(const vector<string>& tokens) {
@@ -1216,13 +1243,35 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
       }
     }
     else if(tokens[0] == "ACL") {
-      string role = "default";
       upperCase(tokens[1]);
       if(tokens[1] == "WHOAMI") {
-        response = "$"+to_string(role.size())+"\r\n"+role+"\r\n";
+        response = "$"+to_string((*userInfo.begin()).first.size())+"\r\n"+(*userInfo.begin()).first+"\r\n";
       }
       else if(tokens[1] == "GETUSER"){
-        response = "*4\r\n$5\r\nflags\r\n*1\r\n$6\r\nnopass\r\n$9\r\npasswords\r\n*0\r\n";
+        response = "*4\r\n$5\r\nflags\r\n";
+        vector<string> temp;
+        temp.push_back("GARBAGE");
+        if(userInfo["default"].passwords.size() == 0) {
+          flags.insert("nopass");
+          temp.push_back("nopass");
+        }
+        else {
+          if(flags.find("nopass") != flags.end()) flags.erase("nopass"); 
+        }
+        response += encodeRESP(temp,true);
+        temp.clear();
+        temp.push_back("GARBAGE");
+        for(string& str : userInfo["default"].passwords) {
+          temp.push_back(str);
+        }
+        response += encodeRESP(temp,true);
+      }
+      else if(tokens[1] == "SETUSER"){
+        if(tokens.size() > 3) {
+          userInfo["default"].passwords.insert(SHA256(tokens[4].substr(1,tokens.size()-1)));
+        }
+
+        response = encodeRESPsimpleSTR("OK");
       }
       
     }
@@ -1740,6 +1789,7 @@ int main(int argc, char **argv) {
     }
   }
   
+  userInfo["default"].flag.insert("nopass");
   readRDB();
 
   eventLoop();
