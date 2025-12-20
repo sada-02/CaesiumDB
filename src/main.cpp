@@ -732,7 +732,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
 
       for(int i=0 ;i<tokens.size() ;i++) {
         response+="$"+to_string(int(tokens[i].size()))+"\r\n"+tokens[i]+"\r\n";
-        if(i != 0 && channels[currFD].find(tokens[i]) != channels[currFD].end()) {
+        if(i != 0 && channels[currFD].connectedChannels.find(tokens[i]) != channels[currFD].connectedChannels.end()) {
           channels[currFD].connectedChannels.erase(tokens[i]);
           clientChannels[tokens[i]].erase(currFD);
         }
@@ -996,7 +996,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
 
       for(int i=0 ;i<tokens.size() ;i++) {
         response+="$"+to_string(int(tokens[i].size()))+"\r\n"+tokens[i]+"\r\n";
-        if(i != 0 && channels[currFD].find(tokens[i]) != channels[currFD].end()) {
+        if(i != 0 && channels[currFD].connectedChannels.find(tokens[i]) != channels[currFD].connectedChannels.end()) {
           channels[currFD].connectedChannels.erase(tokens[i]);
           clientChannels[tokens[i]].erase(currFD);
         }
