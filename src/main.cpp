@@ -1279,7 +1279,8 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
       }
     }
     else if(tokens[0] == "AUTH") {
-      if(userInfo["default"].passwords.find(tokens[2]) != userInfo["default"].passwords.end()) {
+      string hashedPassword = SHA256(tokens[2]);
+      if(userInfo["default"].passwords.find(hashedPassword) != userInfo["default"].passwords.end()) {
         response = encodeRESPsimpleSTR("OK");
       }
       else {
