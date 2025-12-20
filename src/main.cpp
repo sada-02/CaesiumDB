@@ -193,6 +193,7 @@ map<string,List> LISTS;
 map<string,StreamList> STREAM;
 InfoServer info;
 map<int,channelHandler> channels;
+map<string,set<int>> clientChannels;
 
 vector<string> RESPparser(const char* str) {
   int n = strlen(str);
@@ -703,12 +704,17 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
 
       for(int i=0 ;i<tokens.size() ;i++) {
         response+="$"+to_string(int(tokens[i].size()))+"\r\n"+tokens[i]+"\r\n";
-        if(i != 0)
-        channels[currFD].connectedChannels.insert(tokens[i]);
+        if(i != 0) {
+          channels[currFD].connectedChannels.insert(tokens[i]);
+          clientChannels[tokens[i]].insert(currFD);
+        }
       }
 
       response += encodeRESPint(channels[currFD].connectedChannels.size());
       channels[currFD].inSubsribeMode = true;
+    }
+    else if(tokens[0] == "PUBLISH") {
+      response = encodeRESPint(clientChannels[tokens[1]].size());
     }
     else {
       response = encodeRESPsimpleERR("ERR Can't execute \'"+ tokens[0] +"\': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context");
@@ -937,8 +943,11 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
 
       for(int i=0 ;i<tokens.size() ;i++) {
         response+="$"+to_string(int(tokens[i].size()))+"\r\n"+tokens[i]+"\r\n";
-        if(i != 0)
-        channels[currFD].connectedChannels.insert(tokens[i]);
+
+        if(i != 0) {
+          channels[currFD].connectedChannels.insert(tokens[i]);
+          clientChannels[tokens[i]].insert(currFD);
+        }
       }
 
       response += encodeRESPint(channels[currFD].connectedChannels.size());
