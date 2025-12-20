@@ -19,6 +19,8 @@
 #include <chrono>
 #include <optional>
 #include <climits>
+#include <cstdint>
+#include "encode.h"
 using namespace std;
 namespace fs = filesystem;
 
@@ -1122,8 +1124,9 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         response = encodeRESPsimpleERR("ERR invalid longitude,latitude pair "+to_string(longitude)+","+to_string(latitude));
       }
       else {
-        SortedSet[tokens[1]][tokens[4]] = 0;
-        SetScore[tokens[1]][0] = tokens[4];
+        double score = double(encode(latitude,longitude));
+        SortedSet[tokens[1]][tokens[4]] = score;
+        SetScore[tokens[1]][score] = tokens[4];
         response = encodeRESPint(1);
       }
     }
