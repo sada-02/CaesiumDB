@@ -949,6 +949,9 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
           clientChannels[tokens[i]].insert(currFD);
         }
       }
+      else if(tokens[0] == "PUBLISH") {
+        response = encodeRESPint(clientChannels[tokens[1]].size());
+      }
 
       response += encodeRESPint(channels[currFD].connectedChannels.size());
       channels[currFD].inSubsribeMode = true;
