@@ -911,6 +911,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
 
     for(int i=0 ;i<tokens.size() ;i++) {
       response+="$"+to_string(int(tokens[i].size()))+"\r\n"+tokens[i]+"\r\n";
+      if(tokens[i] != "subscribe")
       channels.insert(tokens[i]);
     }
 
