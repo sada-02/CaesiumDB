@@ -1,7 +1,7 @@
 #include <cstdint>
 
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef DECODE_H
+#define DECODE_H
 
 struct Coordinates {
     double latitude;
