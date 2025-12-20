@@ -904,7 +904,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
     response = "*"+to_string(int(tokens.size())+1)+"\r\n";
     
     for(int i=1 ;i<tokens.size() ;i++) {
-      response+="$"+to_string(int(str[i].size()))+"\r\n"+str[i]+"\r\n";
+      response+="$"+to_string(int(tokens[i].size()))+"\r\n"+tokens[i]+"\r\n";
     }
 
     response += encodeRESPint(tokens.size()-1);
