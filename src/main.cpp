@@ -1040,7 +1040,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
       }
       else {
         if(sidx<0 ) {
-          sidx = max(0,abs(sidx)>SortedSet[tokens[1]].size()+sidx);
+          sidx = max(0,SortedSet[tokens[1]].size()+sidx);
         }
         if(eidx<0) {
           eidx = max(0,SortedSet[tokens[1]].size()+eidx);
