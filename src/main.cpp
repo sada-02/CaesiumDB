@@ -699,6 +699,20 @@ void propagateToReplicas(const vector<string>& tokens) {
   info.replicationOffset = to_string(stoll(info.replicationOffset) + command.size());
 }
 
+double geohashGetDistance(double lon1d, double lat1d, double lon2d, double lat2d) {
+    double lat1r, lon1r, lat2r, lon2r, u, v, a;
+    lon1r = deg_rad(lon1d);
+    lon2r = deg_rad(lon2d);
+    v = sin((lon2r - lon1r) / 2);
+    if (v == 0.0)
+        return geohashGetLatDistance(lat1d, lat2d);
+    lat1r = deg_rad(lat1d);
+    lat2r = deg_rad(lat2d);
+    u = sin((lat2r - lat1r) / 2);
+    a = u * u + cos(lat1r) * cos(lat2r) * v * v;
+    return 2.0 * EARTH_RADIUS_IN_METERS * asin(sqrt(a));
+}
+
 bool checkValidLoc(double& longitude , double& latitude) {
   if(longitude>180 || longitude<-180) return false;
   if(latitude>85.05112878 || latitude<-85.05112878) return false;
@@ -1151,6 +1165,23 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
           temp.push_back(ss.str());
           response += encodeRESP(temp,true);
         }
+      }
+    }
+    else if(tokens[0] == "GEODIST") {
+      if(SortedSet.find(tokens[1]) == SortedSet.end()) {
+        response = "$-1\r\n";
+      }
+      else if(SortedSet[tokens[1]].find(tokens[2]) == SortedSet[tokens[1]].end() || 
+    SortedSet[tokens[1]].find(tokens[3]) == SortedSet[tokens[1]].end()) {
+        response = "$-1\r\n";
+      }
+      else {
+        Coordinates pos1 = decode(uint64_t(Sorted[tokens[1]][tokens[2]])) , pos2 = decode(uint64_t(Sorted[tokens[1]][tokens[3]])) ;
+        double dist = geohashGetDistance(pos1.longitude,pos1.latitude,pos2.longitude,pos2.latitude);
+        vector<string> temp ;
+        temp.push_back("GARBAGE");
+        temp.push_back(to_string(dist));
+        response = encodeRESP(temp);
       }
     }
   }
