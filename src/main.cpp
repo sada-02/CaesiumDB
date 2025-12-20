@@ -185,8 +185,8 @@ struct InfoServer{
 
 struct channelHandler{
   set<string> connectedChannels;
+  bool inSubsribeMode = false;
 };
-bool inSubsribeMode = false;
 
 map<string,metaData> DATA;
 map<string,List> LISTS;
@@ -693,7 +693,7 @@ void propagateToReplicas(const vector<string>& tokens) {
 
 string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD) {
   string response = "";
-  if(inSubsribeMode) {
+  if(channels[currFD].inSubsribeMode) {
     if(tokens[0] == "PING") {
       response = "*2\r\n$4\r\npong\r\n$0\r\n\r\n";
     }
@@ -708,7 +708,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
       }
 
       response += encodeRESPint(channels[currFD].connectedChannels.size());
-      inSubsribeMode = true;
+      channels[currFD].inSubsribeMode = true;
     }
     else {
       response = encodeRESPsimpleERR("ERR Can't execute \'"+ tokens[0] +"\': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context");
@@ -942,7 +942,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
       }
 
       response += encodeRESPint(channels[currFD].connectedChannels.size());
-      inSubsribeMode = true;
+      channels[currFD].inSubsribeMode = true;
     }
   }
 
