@@ -195,6 +195,7 @@ InfoServer info;
 map<int,channelHandler> channels;
 map<string,set<int>> clientChannels;
 map<string,map<string,double>> SortedSet;
+map<double,string> SetScore;
 
 vector<string> RESPparser(const char* str) {
   int n = strlen(str);
@@ -1009,7 +1010,28 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
     else if(tokens[0] == "ZADD") {
       double score = stod(tokens[2]);
       response = encodeRESPint(SortedSet[tokens[1]].find(tokens[3]) != SortedSet[tokens[1]].end() ? 0 : 1);
+      if(SortedSet[tokens[1]].find(tokens[3]) != SortedSet[tokens[1]].end()) SetScore[tokens[1]].erase(tokens[3]);
       SortedSet[tokens[1]][tokens[3]] = score;
+      SetScore[score] = tokens[3];
+    }
+    else if(tokens[0] == "ZRANK") {
+      vector<pair<double,string>> temp;
+      for(const auto& c : SetScore[tokens[1]]) {
+        temp.push_back({c.first,c.second});
+      }
+
+      sort(temp);
+
+      bool found = false;
+      for(int i=0 ;i<temp.size() ;i++) {
+        if(temp[i].second == tokens[2]) {
+          response = encodeRESPint(i);
+          found = true;
+        }
+      }
+      if(!found) {
+        response = "$-1\r\n";
+      }
     }
   }
 
