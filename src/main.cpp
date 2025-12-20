@@ -1016,8 +1016,8 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
     }
     else if(tokens[0] == "ZRANK") {
       vector<pair<double,string>> temp;
-      for(const auto& c : SetScore[tokens[1]]) {
-        temp.push_back({c.first,c.second});
+      for(const auto& c : SortedSet[tokens[1]]) {
+        temp.push_back({c.second,c.first});
       }
 
       sort(temp);
