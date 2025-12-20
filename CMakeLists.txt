@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 
 project(redis-starter-cpp)
 
-set(SOURCE_FILES src/main.cpp src/encode.cpp)
+set(SOURCE_FILES src/main.cpp src/encode.cpp src/decode.cpp)
 
 set(CMAKE_CXX_STANDARD 23) # Enable the C++23 standard
 set(THREADS_PREFER_PTHREAD_FLAG ON)

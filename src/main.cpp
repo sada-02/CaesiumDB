@@ -21,6 +21,7 @@
 #include <climits>
 #include <cstdint>
 #include "encode.h"
+#include "decode.h"
 using namespace std;
 namespace fs = filesystem;
 
@@ -1129,6 +1130,18 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         SetScore[tokens[1]][score] = tokens[4];
         response = encodeRESPint(1);
       }
+    }
+    else if(tokens[0] == "GEOPOS") {
+      Coordinates curr = decode(uint64_t(SetScore[tokens[1]][tokens[2]]));
+      vector<string> temp;
+      temp.push_back("GARBAGE");
+      stringstream ss;
+      ss << setprecision(17) << curr.longitude;
+      temp.push_back(ss.str());
+      ss.clear();
+      ss << setprecision(17) << curr.latitude;
+      temp.push_back(ss.str());
+      response = encodeRESP(temp,true);
     }
   }
 
