@@ -1271,7 +1271,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
       }
       else if(tokens[1] == "SETUSER"){
         if(tokens.size() > 3) {
-          string passwd = tokens[4].substr(1,tokens.size()-1);
+          string passwd = tokens[3].substr(1,tokens.size()-1);
           userInfo["default"].passwords.insert(SHA256(passwd));
         }
 
