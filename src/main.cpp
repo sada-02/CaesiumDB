@@ -221,10 +221,11 @@ vector<string> RESPparser(const char* str) {
   return tokens;
 }
 
-string encodeRESP(const vector<string>& str , bool isArr) {
+string encodeRESP(const vector<string>& str , bool isArr , bool fullArr = false) {
   string res = "";
   if(isArr) {
-    res = "*"+to_string(int(str.size())-1)+"\r\n";
+    if(fullArr) res = "*"+to_string(int(str.size()))+"\r\n";
+    else res = "*"+to_string(int(str.size())-1)+"\r\n";
   }
   for(int i=1 ;i<str.size() ;i++) {
     res+="$"+to_string(int(str[i].size()))+"\r\n"+str[i]+"\r\n";
@@ -907,7 +908,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
     for(int i=1 ;i<tokens.size() ;i++) {
       ch.push_back(tokens[i]);
     }
-    response = encodeRESP(ch,true);
+    response = encodeRESP(ch,true,true);
     response += encodeRESPint(ch.size());
   }
 
