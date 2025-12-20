@@ -1215,6 +1215,10 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         response = encodeRESP(temp,true);
       }
     }
+    else if(tokens[0] == "ACL") {
+      string role = "default";
+      response = "$"+to_string(role.size())+"\r\n"+role+"\r\n";
+    }
   }
 
   return response;
