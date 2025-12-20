@@ -1069,6 +1069,11 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         }
       }
     }
+    else if(tokens[0] == "ZCARD") {
+      int size = 0;
+      if(SortedSet.find(tokens[1]) != SortedSet.end()) size = SortedSet[tokens[1]].size();
+      response = encodeRESPint(size);
+    }
   }
 
   return response;
