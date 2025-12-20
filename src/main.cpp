@@ -698,7 +698,7 @@ void propagateToReplicas(const vector<string>& tokens) {
 
 bool checkValidLoc(double& longitude , double& latitude) {
   if(longitude>180 || longitude<-180) return false;
-  if(longitude>85.05112878 || longitude<-85.05112878) return false;
+  if(latitude>85.05112878 || latitude<-85.05112878) return false;
 
   return true;
 }
