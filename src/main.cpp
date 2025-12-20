@@ -1454,6 +1454,11 @@ void eventLoop() {
       int clientFD = accept(info.serverFD, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
       clientINFO[clientFD] = client_addr;
       clients.push_back(clientFD);
+      
+      if(userInfo["default"].passwords.size() == 0) {
+        userInfo["default"].users.insert(clientFD);
+      }
+      
       cout << "Client connected\n";
     }
     
