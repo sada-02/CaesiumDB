@@ -1122,6 +1122,8 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         response = encodeRESPsimpleERR("ERR invalid longitude,latitude pair "+to_string(longitude)+","+to_string(latitude));
       }
       else {
+        SortedSet[tokens[2]][tokens[4]] = 0;
+        SetScore[0] = tokens[4];
         response = encodeRESPint(1);
       }
     }
