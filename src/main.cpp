@@ -23,6 +23,8 @@
 #include <cmath>
 #include "encode.h"
 #include "decode.h"
+
+#define D_R (M_PI / 180.0)
 using namespace std;
 namespace fs = filesystem;
 
