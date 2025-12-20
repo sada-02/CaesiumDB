@@ -726,6 +726,21 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         send(c,message.c_str(),message.size(),0);
       }
     }
+    else if(tokens[0] == "UNSUBSCRIBE") {
+      response = "*"+to_string(int(tokens.size())+1)+"\r\n";
+      lowerCase(tokens[0]);
+
+      for(int i=0 ;i<tokens.size() ;i++) {
+        response+="$"+to_string(int(tokens[i].size()))+"\r\n"+tokens[i]+"\r\n";
+        if(i != 0 && channels[currFD].find(tokens[i]) != channels[currFD].end()) {
+          channels[currFD].connectedChannels.erase(tokens[i]);
+          clientChannels[tokens[i]].erase(currFD);
+        }
+      }
+
+      response += encodeRESPint(channels[currFD].connectedChannels.size());
+      if(channels[currFD].connectedChannels.size() == 0) channels[currFD].inSubsribeMode = false;
+    }
     else {
       response = encodeRESPsimpleERR("ERR Can't execute \'"+ tokens[0] +"\': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context");
     }
@@ -974,6 +989,21 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
       for(int c : clientChannels[tokens[1]]) {
         send(c,message.c_str(),message.size(),0);
       }
+    }
+    else if(tokens[0] == "UNSUBSCRIBE") {
+      response = "*"+to_string(int(tokens.size())+1)+"\r\n";
+      lowerCase(tokens[0]);
+
+      for(int i=0 ;i<tokens.size() ;i++) {
+        response+="$"+to_string(int(tokens[i].size()))+"\r\n"+tokens[i]+"\r\n";
+        if(i != 0 && channels[currFD].find(tokens[i]) != channels[currFD].end()) {
+          channels[currFD].connectedChannels.erase(tokens[i]);
+          clientChannels[tokens[i]].erase(currFD);
+        }
+      }
+
+      response += encodeRESPint(channels[currFD].connectedChannels.size());
+      if(channels[currFD].connectedChannels.size() == 0) channels[currFD].inSubsribeMode = false;
     }
   }
 
