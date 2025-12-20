@@ -1135,12 +1135,12 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
       response = "*"+to_string(tokens.size()-2)+"\r\n";
       for(int i=2 ;i<tokens.size() ;i++) {
         if(SortedSet.find(tokens[1]) == SortedSet.end() || 
-      SortedSet[tokens[1]].find(tokens[2]) == SortedSet[tokens[1]].end()) {
+      SortedSet[tokens[1]].find(tokens[i]) == SortedSet[tokens[1]].end()) {
           response+="*-1\r\n";
         }
         else {
           vector<string> temp;
-          Coordinates curr = decode(uint64_t(SortedSet[tokens[1]][tokens[2]]));
+          Coordinates curr = decode(uint64_t(SortedSet[tokens[1]][tokens[i]]));
           temp.push_back("GARBAGE");
           stringstream ss;
           ss << setprecision(17) << curr.longitude;
