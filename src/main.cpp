@@ -1010,7 +1010,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
     else if(tokens[0] == "ZADD") {
       double score = stod(tokens[2]);
       response = encodeRESPint(SortedSet[tokens[1]].find(tokens[3]) != SortedSet[tokens[1]].end() ? 0 : 1);
-      if(SortedSet[tokens[1]].find(tokens[3]) != SortedSet[tokens[1]].end()) SetScore.erase(tokens[2]);
+      if(SortedSet[tokens[1]].find(tokens[3]) != SortedSet[tokens[1]].end()) SetScore.erase(SortedSet[tokens[1]][tokens[3]]);
       SortedSet[tokens[1]][tokens[3]] = score;
       SetScore[score] = tokens[3];
     }
@@ -1020,7 +1020,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
         temp.push_back({c.second,c.first});
       }
 
-      sort(temp);
+      sort(temp.begin(), temp.end());
 
       bool found = false;
       for(int i=0 ;i<temp.size() ;i++) {
