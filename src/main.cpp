@@ -1277,6 +1277,14 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
 
         response = encodeRESPsimpleSTR("OK");
       }
+      else {
+        if(userInfo["default"].passwords.find(tokens[2]) != userInfo["default"].passwords.end()) {
+          response = encodeRESPsimpleSTR("OK");
+        }
+        else {
+          response = encodeRESPsimpleERR("WRONGPASS invalid username-password pair or user is disabled.");
+        }
+      }
       
     }
   }
