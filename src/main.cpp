@@ -1145,6 +1145,7 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
           stringstream ss;
           ss << setprecision(17) << curr.longitude;
           temp.push_back(ss.str());
+          ss.str("");
           ss.clear();
           ss << setprecision(17) << curr.latitude;
           temp.push_back(ss.str());
