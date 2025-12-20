@@ -696,6 +696,13 @@ void propagateToReplicas(const vector<string>& tokens) {
   info.replicationOffset = to_string(stoll(info.replicationOffset) + command.size());
 }
 
+bool checkValidLoc(double& longitude , double& latitude) {
+  if(longitude>180 || longitude<-180) return false;
+  if(longitude>85.05112878 || longitude<-85.05112878) return false;
+
+  return true;
+}
+
 string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD) {
   string response = "";
   if(channels[currFD].inSubsribeMode) {
@@ -1110,7 +1117,13 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
       }      
     }
     else if(tokens[0] == "GEOADD") {
-      response = encodeRESPint(1);
+      double longitude = stod(tokens[2]) , latitude = stod(tokens[3]);
+      if(!checkValidLoc(longitude,latitude)) {
+        response = encodeRESPsimpleERR("ERR invalid longitude,latitude pair "+to_string(longitude)+","+to_string(latitude));
+      }
+      else {
+        response = encodeRESPint(1);
+      }
     }
   }
 
