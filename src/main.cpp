@@ -26,7 +26,7 @@ map<int,struct sockaddr_in> clientINFO;
 map<int,vector<vector<string>>> onQueue;
 map<int, long long> replicaOffsets;
 pair<string,string> locFile;
-vector<string> channels;
+set<string> channels;
 
 string encodeRESP(const vector<string>& str , bool isArr = false);
 pair<map<long long, map<long, map<string,string>>>, int> checkIDExists(const string& key, string& id);
@@ -908,12 +908,13 @@ string generateResponse(vector<string>& tokens , bool& sendResponse , int currFD
   else if(tokens[0] == "SUBSCRIBE") {
     response = "*"+to_string(int(tokens.size())+1)+"\r\n";
     lowerCase(tokens[0]);
-    
+
     for(int i=0 ;i<tokens.size() ;i++) {
       response+="$"+to_string(int(tokens[i].size()))+"\r\n"+tokens[i]+"\r\n";
+      channels.insert(tokens[i]);
     }
 
-    response += encodeRESPint(tokens.size()-1);
+    response += encodeRESPint(channels.size());
   }
 
   return response;
